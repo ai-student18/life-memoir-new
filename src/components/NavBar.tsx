@@ -21,12 +21,12 @@ const NavBar = () => {
   };
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 px-6 md:px-12 h-[72px] transition-all duration-300 ${isScrolled ? 'bg-white bg-opacity-80 backdrop-blur-md shadow-sm' : 'bg-transparent'}`}>
+    <nav className={`fixed top-0 left-0 right-0 z-50 px-6 md:px-12 h-[72px] transition-all duration-300 ${isScrolled ? 'bg-white bg-opacity-90 backdrop-blur-md shadow-sm' : 'bg-white bg-opacity-80 backdrop-blur-sm'}`}>
       <div className="max-w-7xl mx-auto flex items-center justify-between h-full">
         {/* Logo and Website Name */}
         <div className="flex items-center">
-          <div className="h-10 w-10 bg-memoir-blueGray rounded-full mr-3 flex items-center justify-center">
-            <Book className="text-white" size={20} />
+          <div className="h-10 w-10 mr-3 flex items-center justify-center">
+            <img src="/lovable-uploads/2af28a4a-0c05-4df7-bded-cb21ef1cbaab.png" alt="LifeMemoir Logo" className="w-10 h-10" />
           </div>
           <h1 className="text-xl font-bold text-memoir-darkGray">LifeMemoir</h1>
         </div>
