@@ -1,19 +1,13 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Pencil, Book } from 'lucide-react';
-
 const HeroSection = () => {
-  return (
-    <section id="hero" className="relative h-[60vh] min-h-[500px] flex items-center justify-center overflow-hidden">
+  return <section id="hero" className="relative h-[60vh] min-h-[500px] flex items-center justify-center overflow-hidden">
       {/* Background Image */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: "url('/lovable-uploads/225b7f4c-4cf8-4a77-a83f-d639e84ab3f4.png')",
-          filter: "brightness(0.9)",
-        }}
-      ></div>
+      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{
+      backgroundImage: "url('/lovable-uploads/225b7f4c-4cf8-4a77-a83f-d639e84ab3f4.png')",
+      filter: "brightness(0.9)"
+    }}></div>
       
       {/* Overlay */}
       <div className="absolute inset-0 bg-black bg-opacity-30"></div>
@@ -37,8 +31,6 @@ const HeroSection = () => {
           </Button>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
-
 export default HeroSection;
