@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,7 +62,14 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+                // Custom colors for LifeMemoir
+                memoir: {
+                    yellow: "#FFD217", // Primary CTA
+                    darkGray: "#333333", // Text
+                    blueGray: "#5B9AA0", // Secondary Accents
+                    lightGray: "#F9F9F9" // Testimonials background
+                }
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -84,12 +92,55 @@ export default {
 					to: {
 						height: '0'
 					}
-				}
+				},
+                'fade-in-up': {
+                    '0%': {
+                        opacity: '0',
+                        transform: 'translateY(20px)'
+                    },
+                    '100%': {
+                        opacity: '1',
+                        transform: 'translateY(0)'
+                    }
+                },
+                'fade-in': {
+                    '0%': {
+                        opacity: '0'
+                    },
+                    '100%': {
+                        opacity: '1'
+                    }
+                },
+                'float': {
+                    '0%, 100%': {
+                        transform: 'translateY(0)'
+                    },
+                    '50%': {
+                        transform: 'translateY(-5px)'
+                    }
+                },
+                'scroll-left': {
+                    '0%': {
+                        transform: 'translateX(0)'
+                    },
+                    '100%': {
+                        transform: 'translateX(-100%)'
+                    }
+                }
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
-			}
+				'accordion-up': 'accordion-up 0.2s ease-out',
+                'fade-in-up': 'fade-in-up 0.6s ease-out',
+                'fade-in': 'fade-in 0.6s ease-out',
+                'float': 'float 3s ease-in-out infinite',
+                'scroll-left': 'scroll-left 25s linear infinite'
+			},
+            boxShadow: {
+                'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.1)',
+                'neuro': '6px 6px 12px #d9d9d9, -6px -6px 12px #ffffff',
+                'neuro-inset': 'inset 6px 6px 12px #d9d9d9, inset -6px -6px 12px #ffffff'
+            }
 		}
 	},
 	plugins: [require("tailwindcss-animate")],
