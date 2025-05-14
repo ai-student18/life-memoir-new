@@ -12,17 +12,15 @@ const HeroSection = () => {
         filter: "brightness(0.7)"
       }}></div>
       
-      {/* Single Overlay Layer - Using only one overlay with appropriate opacity */}
+      {/* Single overlay layer with appropriate opacity */}
       <div className="absolute inset-0 bg-black bg-opacity-50"></div>
       
-      {/* Content */}
-      <div className="relative z-10 text-center max-w-3xl px-6 mt-8 md:mt-0">
-        {/* Headline - Using a single h1 with proper spacing */}
-        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-white drop-shadow-lg">
+      {/* Content - Single instance only */}
+      <div className="relative z-10 text-center max-w-3xl px-6">
+        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-white drop-shadow-lg">
           Write your life story with ease and warmth
         </h1>
         
-        {/* Subheading - Increased bottom margin for better spacing */}
         <p className="text-lg md:text-xl mb-10 text-white drop-shadow-md">
           The platform that turns messy memories into a professional, heartfelt book
         </p>
@@ -34,8 +32,8 @@ const HeroSection = () => {
             Start Writing
           </Button>
           
-          {/* Secondary button - Improved visibility with dark blue background */}
-          <Button variant="outline" className="secondary-button bg-[#1a365d] bg-opacity-80 text-white border-white text-lg px-6 py-6 hover:bg-[#1a365d] hover:bg-opacity-90">
+          {/* Secondary button - Dark blue background for better visibility */}
+          <Button variant="outline" className="secondary-button bg-[#1a365d] text-white border-white text-lg px-6 py-6 hover:bg-[#1a365d] hover:bg-opacity-90">
             <Book className="mr-2 h-5 w-5" />
             Learn More
           </Button>
