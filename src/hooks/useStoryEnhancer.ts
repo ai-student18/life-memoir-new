@@ -1,46 +1,56 @@
 
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { enhanceStory as enhanceStoryAPI, EnhanceStoryParams } from '@/services/storyEnhancementService';
+import { useToast } from '@/components/ui/use-toast';
 
 export interface UseStoryEnhancerProps {
   systemInstruction?: string;
 }
 
+/**
+ * Hook for enhancing stories with AI
+ */
 export const useStoryEnhancer = (props: UseStoryEnhancerProps = {}) => {
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { systemInstruction } = props;
+  const { toast } = useToast();
 
   const enhanceStory = async (text: string): Promise<string> => {
     if (!text || text.trim() === '') {
-      throw new Error('No text provided for enhancement');
+      const errorMsg = 'No text provided for enhancement';
+      toast({
+        title: 'Error',
+        description: errorMsg,
+        variant: 'destructive',
+      });
+      throw new Error(errorMsg);
     }
 
     setIsEnhancing(true);
     setError(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('enhance-story', {
-        body: { 
-          text, 
-          systemInstruction 
-        }
-      });
-
-      if (error) {
-        throw new Error(error.message || 'Failed to enhance story');
-      }
-
-      if (!data || !data.enhancedText) {
-        throw new Error('No enhanced text returned from API');
-      }
-
+      const params: EnhanceStoryParams = {
+        text,
+        systemInstruction
+      };
+      
+      const enhancedText = await enhanceStoryAPI(params);
+      
       setIsEnhancing(false);
-      return data.enhancedText;
+      return enhancedText;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to enhance story';
       setIsEnhancing(false);
       setError(errorMessage);
+      
+      toast({
+        title: 'Enhancement Failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      
       throw err;
     }
   };
