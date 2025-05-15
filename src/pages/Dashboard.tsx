@@ -10,21 +10,29 @@ import StoryInputSection from '@/components/dashboard/StoryInputSection';
 import StoryOutputSection from '@/components/dashboard/StoryOutputSection';
 import SaveStoryDialog from '@/components/dashboard/SaveStoryDialog';
 import AISettingsDialog from '@/components/dashboard/AISettingsDialog';
+import { StoriesProvider, useStories } from '@/context/StoriesContext';
 
-const Dashboard = () => {
+// Main Dashboard content that uses the context
+const DashboardContent = () => {
   const [session, setSession] = useState(null);
-  const [storyInput, setStoryInput] = useState('');
-  const [enhancedStory, setEnhancedStory] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState(null);
-  const [autoSaveTimeout, setAutoSaveTimeout] = useState(null);
-  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
-  const [storyTitle, setStoryTitle] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [systemInstruction, setSystemInstruction] = useState(
     'Enhance this life story with improved narrative flow, correct any grammar or spelling errors, and make it more engaging to read.'
   );
   const navigate = useNavigate();
+  
+  const { 
+    storyInput, 
+    setStoryInput,
+    enhancedStory, 
+    setEnhancedStory,
+    lastSaved,
+    storyTitle,
+    setStoryTitle,
+    saveStory,
+    isSaving
+  } = useStories();
   
   // Use our enhanced hook with the system instruction
   const { enhanceStory, isEnhancing, error } = useStoryEnhancer({ 
@@ -49,33 +57,11 @@ const Dashboard = () => {
 
     return () => {
       subscription?.unsubscribe();
-      if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
     };
   }, [navigate]);
 
-  // Auto-save draft functionality
+  // Load saved system instruction if available
   useEffect(() => {
-    if (storyInput && storyInput.trim() !== '') {
-      if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
-      
-      const timeout = setTimeout(() => {
-        localStorage.setItem('storyDraft', storyInput);
-        setLastSaved(new Date());
-      }, 2000);
-      
-      setAutoSaveTimeout(timeout);
-    }
-  }, [storyInput]);
-
-  // Load draft on initial render
-  useEffect(() => {
-    const savedDraft = localStorage.getItem('storyDraft');
-    if (savedDraft) {
-      setStoryInput(savedDraft);
-      setLastSaved(new Date());
-    }
-    
-    // Load saved system instruction if available
     const savedInstruction = localStorage.getItem('systemInstruction');
     if (savedInstruction) {
       setSystemInstruction(savedInstruction);
@@ -105,63 +91,8 @@ const Dashboard = () => {
   };
 
   const handleSaveStory = async () => {
-    if (!storyTitle.trim()) {
-      toast.error("Please enter a title for your story");
-      return;
-    }
-
-    setIsSaving(true);
-    
-    try {
-      if (!session?.user) {
-        throw new Error("You must be logged in to save stories");
-      }
-      
-      // Save the story to the database
-      const { data, error } = await supabase
-        .from('stories')
-        .insert({
-          user_id: session.user.id,
-          title: storyTitle,
-          original_text: storyInput,
-          enhanced_text: enhancedStory || null
-        })
-        .select('id')
-        .single();
-      
-      if (error) throw error;
-      
-      // Save as a file in storage
-      if (data?.id) {
-        const fileName = `${session.user.id}/${data.id}.txt`;
-        const fileContent = enhancedStory || storyInput;
-        
-        // Convert text to a file object
-        const blob = new Blob([fileContent], { type: 'text/plain' });
-        const file = new File([blob], `${storyTitle}.txt`, { type: 'text/plain' });
-        
-        const { error: uploadError } = await supabase.storage
-          .from('stories')
-          .upload(fileName, file);
-        
-        if (uploadError) throw uploadError;
-        
-        // Update the story record with file path
-        await supabase
-          .from('stories')
-          .update({ file_path: fileName })
-          .eq('id', data.id);
-      }
-      
-      toast.success("Your story has been saved!");
-      setIsSaveDialogOpen(false);
-      setStoryTitle('');
-    } catch (error) {
-      console.error("Error saving story:", error);
-      toast.error(error.message || "Failed to save your story. Please try again.");
-    } finally {
-      setIsSaving(false);
-    }
+    await saveStory();
+    setIsSaveDialogOpen(false);
   };
 
   const handleSignOut = async () => {
@@ -223,6 +154,15 @@ const Dashboard = () => {
         saveSystemInstruction={saveSystemInstruction}
       />
     </div>
+  );
+};
+
+// Wrapper component that provides the StoriesContext
+const Dashboard = () => {
+  return (
+    <StoriesProvider>
+      <DashboardContent />
+    </StoriesProvider>
   );
 };
 
