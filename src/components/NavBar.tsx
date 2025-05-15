@@ -2,10 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, X, LogIn } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 
 const NavBar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -13,11 +17,36 @@ const NavBar = () => {
     };
 
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    
+    // Check for active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user || null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user || null);
+      }
+    );
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      subscription?.unsubscribe();
+    };
   }, []);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const handleAuthClick = () => {
+    navigate('/auth');
+    setIsMobileMenuOpen(false);
+  };
+
+  const handleDashboardClick = () => {
+    navigate('/dashboard');
+    setIsMobileMenuOpen(false);
   };
 
   return (
@@ -43,11 +72,19 @@ const NavBar = () => {
           </div>
           
           <div className="flex items-center space-x-3">
-            <Button variant="outline" className="secondary-button">
-              <LogIn className="mr-2 h-4 w-4" />
-              Login
-            </Button>
-            <Button className="primary-button">Register</Button>
+            {user ? (
+              <Button onClick={handleDashboardClick} className="primary-button">
+                Dashboard
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" className="secondary-button" onClick={handleAuthClick}>
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Login
+                </Button>
+                <Button className="primary-button" onClick={handleAuthClick}>Register</Button>
+              </>
+            )}
           </div>
         </div>
         
@@ -72,11 +109,19 @@ const NavBar = () => {
           <a href="#contact" className="py-2 text-memoir-darkGray hover:text-memoir-blueGray transition-colors">Contact</a>
           
           <div className="mt-6 space-y-3">
-            <Button variant="outline" className="w-full secondary-button">
-              <LogIn className="mr-2 h-4 w-4" />
-              Login
-            </Button>
-            <Button className="w-full primary-button">Register</Button>
+            {user ? (
+              <Button className="w-full primary-button" onClick={handleDashboardClick}>
+                Dashboard
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" className="w-full secondary-button" onClick={handleAuthClick}>
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Login
+                </Button>
+                <Button className="w-full primary-button" onClick={handleAuthClick}>Register</Button>
+              </>
+            )}
           </div>
         </div>
       </div>
