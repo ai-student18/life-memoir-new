@@ -3,13 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { LogOut, Save, Settings } from 'lucide-react';
+import { LogOut, Settings } from 'lucide-react';
 import { useStoryEnhancer } from '@/hooks/useStoryEnhancer';
+import StoryInputSection from '@/components/dashboard/StoryInputSection';
+import StoryOutputSection from '@/components/dashboard/StoryOutputSection';
+import SaveStoryDialog from '@/components/dashboard/SaveStoryDialog';
+import AISettingsDialog from '@/components/dashboard/AISettingsDialog';
 
 const Dashboard = () => {
   const [session, setSession] = useState(null);
@@ -190,113 +190,38 @@ const Dashboard = () => {
       <main className="container mx-auto p-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Story Input Section */}
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-memoir-darkGray">Your Story</h2>
-            <Textarea
-              value={storyInput}
-              onChange={(e) => setStoryInput(e.target.value)}
-              placeholder="Start writing or paste your life story here... (supports Hebrew and English)"
-              className="min-h-[400px] font-sans"
-              dir="auto"
-            />
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500">
-                {lastSaved ? `Draft saved at ${lastSaved.toLocaleTimeString()}` : 'Start typing to autosave'}
-              </span>
-              <div className="flex gap-3">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsSaveDialogOpen(true)}
-                >
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Story
-                </Button>
-                <Button 
-                  onClick={handleEnhanceStory} 
-                  disabled={isEnhancing || !storyInput.trim()}
-                >
-                  {isEnhancing ? 'Enhancing...' : 'Enhance with AI'}
-                </Button>
-              </div>
-            </div>
-          </div>
+          <StoryInputSection 
+            storyInput={storyInput}
+            setStoryInput={setStoryInput}
+            lastSaved={lastSaved}
+            handleEnhanceStory={handleEnhanceStory}
+            isEnhancing={isEnhancing}
+            openSaveDialog={() => setIsSaveDialogOpen(true)}
+          />
           
-          {/* Enhanced Story Output Section */}
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-memoir-darkGray">Your Edited Story</h2>
-            <div className={`
-              bg-white/70 backdrop-blur-md border rounded-lg p-6 shadow-lg min-h-[400px] transition-opacity duration-300
-              ${enhancedStory ? 'opacity-100' : 'opacity-50'}
-            `}>
-              <div 
-                className="font-serif whitespace-pre-line h-full" 
-                dir="auto"
-                style={{ 
-                  minHeight: '370px', 
-                  opacity: enhancedStory ? '1' : '0.7'
-                }}
-              >
-                {enhancedStory || 'Your enhanced story will appear here after you click "Enhance with AI"...'}
-              </div>
-            </div>
-          </div>
+          {/* Story Output Section */}
+          <StoryOutputSection enhancedStory={enhancedStory} />
         </div>
       </main>
       
       {/* Save Dialog */}
-      <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Save Your Story</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">Story Title</Label>
-              <Input
-                id="title"
-                value={storyTitle}
-                onChange={(e) => setStoryTitle(e.target.value)}
-                placeholder="Enter a title for your story"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSaveDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveStory} disabled={isSaving}>
-              {isSaving ? 'Saving...' : 'Save'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <SaveStoryDialog 
+        isOpen={isSaveDialogOpen}
+        onOpenChange={setIsSaveDialogOpen}
+        storyTitle={storyTitle}
+        setStoryTitle={setStoryTitle}
+        handleSaveStory={handleSaveStory}
+        isSaving={isSaving}
+      />
       
       {/* AI Settings Dialog */}
-      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>AI Enhancement Settings</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="system-instruction">System Instruction</Label>
-              <Textarea
-                id="system-instruction"
-                value={systemInstruction}
-                onChange={(e) => setSystemInstruction(e.target.value)}
-                placeholder="Instructions for the AI on how to enhance your story"
-                className="min-h-[150px]"
-              />
-              <p className="text-xs text-gray-500">
-                Customize how the AI should enhance your stories. For example, instruct it to focus on improving narrative flow,
-                fixing grammar, making it more emotional, etc.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSettingsOpen(false)}>Cancel</Button>
-            <Button onClick={saveSystemInstruction}>Save Settings</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AISettingsDialog 
+        isOpen={isSettingsOpen}
+        onOpenChange={setIsSettingsOpen}
+        systemInstruction={systemInstruction}
+        setSystemInstruction={setSystemInstruction}
+        saveSystemInstruction={saveSystemInstruction}
+      />
     </div>
   );
 };
