@@ -76,7 +76,7 @@
 
 @layer components {
   .glass-card {
-    @apply bg-white/80 backdrop-blur-sm shadow-glass rounded-lg p-6 border border-gray-100;
+    @apply bg-white bg-opacity-70 backdrop-blur-sm shadow-glass rounded-lg p-6;
   }
   
   .neuro-button {
