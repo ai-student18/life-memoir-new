@@ -4,23 +4,24 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { toast } from "@/components/ui/sonner";
+import NavBar from "@/components/NavBar";
 
 const Dashboard = () => {
-  const [story, setStory] = useState("");
+  const [storyInput, setStoryInput] = useState("");
   const [editedStory, setEditedStory] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Auto-save effect
   useEffect(() => {
-    if (story.trim().length > 0) {
+    if (storyInput.trim().length > 0) {
       const saveTimer = setTimeout(() => {
         handleAutoSave();
       }, 2000);
 
       return () => clearTimeout(saveTimer);
     }
-  }, [story]);
+  }, [storyInput]);
 
   // Mock auto-save function - would connect to backend in production
   const handleAutoSave = () => {
@@ -34,8 +35,8 @@ const Dashboard = () => {
   };
 
   // Mock AI processing - would connect to AI service in production
-  const processWithAI = () => {
-    if (!story.trim()) {
+  const enhanceStory = () => {
+    if (!storyInput.trim()) {
       toast("Please enter your story first", {
         description: "The text area appears to be empty."
       });
@@ -47,7 +48,7 @@ const Dashboard = () => {
     // Simulate AI processing delay
     setTimeout(() => {
       // Mock AI enhancement - in production this would call an AI service
-      const enhancedText = story
+      const enhancedText = storyInput
         .split('.')
         .map(sentence => {
           // Simple mock enhancement logic
@@ -70,6 +71,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-white">
+      <NavBar />
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold text-center mb-8 text-memoir-darkGray">Story Dashboard</h1>
         
@@ -81,20 +83,20 @@ const Dashboard = () => {
               <Textarea
                 className="h-64 lg:h-[500px] resize-none text-base p-4 mb-4 font-sans border-2"
                 placeholder="Write or paste your life story here in Hebrew or English... Share your memories, experiences, and moments that defined your journey."
-                value={story}
-                onChange={(e) => setStory(e.target.value)}
+                value={storyInput}
+                onChange={(e) => setStoryInput(e.target.value)}
                 dir="auto" // Automatically detects text direction (RTL for Hebrew)
               />
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-500">
-                  {isSaving ? "Saving..." : "Saved"}
+                  {isSaving ? "Saving..." : "Draft saved"}
                 </span>
                 <Button 
-                  onClick={processWithAI}
-                  disabled={isProcessing || !story.trim()}
+                  onClick={enhanceStory}
+                  disabled={isProcessing || !storyInput.trim()}
                   className="bg-memoir-yellow hover:bg-memoir-yellow/90 text-memoir-darkGray font-medium"
                 >
-                  {isProcessing ? "Processing..." : "Enhance Your Story"}
+                  {isProcessing ? "Processing..." : "Enhance My Story"}
                 </Button>
               </div>
             </div>
@@ -103,7 +105,7 @@ const Dashboard = () => {
           {/* AI Output Preview */}
           <div className="flex flex-col">
             <h2 className="text-xl font-semibold mb-3 text-memoir-darkGray">Your Edited Story</h2>
-            <Card className="glass-card h-64 lg:h-[500px] overflow-auto">
+            <Card className="glass-card h-64 lg:h-[500px] overflow-auto animate-fade-in">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg text-memoir-darkGray">AI Enhanced Version</CardTitle>
               </CardHeader>
