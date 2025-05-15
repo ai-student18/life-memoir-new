@@ -8,19 +8,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { LogOut, Save } from 'lucide-react';
+import { LogOut, Save, Settings } from 'lucide-react';
+import { useStoryEnhancer } from '@/hooks/useStoryEnhancer';
 
 const Dashboard = () => {
   const [session, setSession] = useState(null);
   const [storyInput, setStoryInput] = useState('');
   const [enhancedStory, setEnhancedStory] = useState('');
-  const [isEnhancing, setIsEnhancing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [autoSaveTimeout, setAutoSaveTimeout] = useState(null);
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [storyTitle, setStoryTitle] = useState('');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [systemInstruction, setSystemInstruction] = useState(
+    'Enhance this life story with improved narrative flow, correct any grammar or spelling errors, and make it more engaging to read.'
+  );
   const navigate = useNavigate();
+  
+  // Use our enhanced hook with the system instruction
+  const { enhanceStory, isEnhancing, error } = useStoryEnhancer({ 
+    systemInstruction 
+  });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -65,6 +74,12 @@ const Dashboard = () => {
       setStoryInput(savedDraft);
       setLastSaved(new Date());
     }
+    
+    // Load saved system instruction if available
+    const savedInstruction = localStorage.getItem('systemInstruction');
+    if (savedInstruction) {
+      setSystemInstruction(savedInstruction);
+    }
   }, []);
 
   const handleEnhanceStory = async () => {
@@ -73,23 +88,20 @@ const Dashboard = () => {
       return;
     }
     
-    setIsEnhancing(true);
-    
     try {
-      // In a real implementation, this would call an API endpoint that interacts with the AI model
-      // For now, we'll simulate the AI enhancement with a timeout
-      setTimeout(() => {
-        // This is a placeholder - in a real app, you would get this from your API
-        const enhancedText = `${storyInput}\n\n[This text would be enhanced by the Gemini Flash 1.5 model in production]`;
-        setEnhancedStory(enhancedText);
-        toast.success("Your story has been enhanced!");
-        setIsEnhancing(false);
-      }, 1500);
+      const enhancedText = await enhanceStory(storyInput);
+      setEnhancedStory(enhancedText);
+      toast.success("Your story has been enhanced!");
     } catch (error) {
       console.error("Error enhancing story:", error);
-      toast.error("Failed to enhance your story. Please try again.");
-      setIsEnhancing(false);
+      toast.error(error instanceof Error ? error.message : "Failed to enhance your story. Please try again.");
     }
+  };
+
+  const saveSystemInstruction = () => {
+    localStorage.setItem('systemInstruction', systemInstruction);
+    setIsSettingsOpen(false);
+    toast.success("AI instruction saved!");
   };
 
   const handleSaveStory = async () => {
@@ -163,10 +175,16 @@ const Dashboard = () => {
     <div className="min-h-screen bg-white">
       <header className="bg-white shadow-sm py-4 px-6 flex justify-between items-center">
         <h1 className="text-2xl font-bold text-memoir-darkGray">LifeMemoir Dashboard</h1>
-        <Button variant="outline" onClick={handleSignOut}>
-          <LogOut className="mr-2 h-4 w-4" />
-          Sign Out
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsSettingsOpen(true)}>
+            <Settings className="mr-2 h-4 w-4" />
+            AI Settings
+          </Button>
+          <Button variant="outline" onClick={handleSignOut}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign Out
+          </Button>
+        </div>
       </header>
       
       <main className="container mx-auto p-6">
@@ -247,6 +265,35 @@ const Dashboard = () => {
             <Button onClick={handleSaveStory} disabled={isSaving}>
               {isSaving ? 'Saving...' : 'Save'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* AI Settings Dialog */}
+      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>AI Enhancement Settings</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="system-instruction">System Instruction</Label>
+              <Textarea
+                id="system-instruction"
+                value={systemInstruction}
+                onChange={(e) => setSystemInstruction(e.target.value)}
+                placeholder="Instructions for the AI on how to enhance your story"
+                className="min-h-[150px]"
+              />
+              <p className="text-xs text-gray-500">
+                Customize how the AI should enhance your stories. For example, instruct it to focus on improving narrative flow,
+                fixing grammar, making it more emotional, etc.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSettingsOpen(false)}>Cancel</Button>
+            <Button onClick={saveSystemInstruction}>Save Settings</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
