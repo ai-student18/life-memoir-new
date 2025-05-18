@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 import type {
@@ -90,8 +91,6 @@ export const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
       if (toastId) {
         addToRemoveQueue(toastId)
       } else {
@@ -126,8 +125,8 @@ export const reducer = (state: State, action: Action): State => {
   }
 }
 
+// Create a separate context and listeners state
 const listeners: Array<(state: State) => void> = []
-
 let memoryState: State = { toasts: [] }
 
 function dispatch(action: Action) {
@@ -137,8 +136,10 @@ function dispatch(action: Action) {
   })
 }
 
+// Define Toast type
 type Toast = Omit<ToasterToast, "id">
 
+// Create toast function
 function toast({ ...props }: Toast) {
   const id = genId()
 
@@ -168,6 +169,7 @@ function toast({ ...props }: Toast) {
   }
 }
 
+// Define useToast hook that properly manages React state
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
 

@@ -10,16 +10,17 @@ import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 
-// Create a function component that wraps the app
-const AppContent = () => {
-  const queryClient = new QueryClient();
+// Create a query client instance that will be consistent across renders
+const queryClient = new QueryClient();
 
+// Main App component
+const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <Toaster />
-      <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <Sonner />
+          <Toaster />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
@@ -36,8 +37,5 @@ const AppContent = () => {
     </QueryClientProvider>
   );
 };
-
-// Main App component
-const App = () => <AppContent />;
 
 export default App;
