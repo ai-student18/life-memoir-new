@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, PlusCircle, Edit, Trash2, BookOpen } from 'lucide-react';
+import { Loader2, PlusCircle, Edit, Trash2, BookOpen, FileQuestion } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -88,8 +88,8 @@ const Dashboard = () => {
       toast.success("New biography created");
       setBiographies(prev => [data, ...prev]);
       
-      // In the future, this would navigate to the biography editor
-      // navigate(`/biography/${data.id}`);
+      // Navigate to the questionnaire
+      navigate(`/biography/${data.id}/questionnaire`);
     } catch (error) {
       console.error('Error creating biography:', error);
       toast.error("Failed to create new biography");
@@ -117,10 +117,25 @@ const Dashboard = () => {
     switch (status.toLowerCase()) {
       case 'draft':
         return 'bg-yellow-200 text-yellow-800';
+      case 'questionnairecompleted':
+        return 'bg-blue-200 text-blue-800';
       case 'published':
         return 'bg-green-200 text-green-800';
       default:
         return 'bg-gray-200 text-gray-800';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'draft':
+        return 'Draft';
+      case 'questionnairecompleted':
+        return 'Questionnaire Completed';
+      case 'published':
+        return 'Published';
+      default:
+        return status;
     }
   };
 
@@ -174,7 +189,7 @@ const Dashboard = () => {
                       {biography.title}
                     </CardTitle>
                     <Badge className={`${getStatusColor(biography.status)}`}>
-                      {biography.status}
+                      {getStatusText(biography.status)}
                     </Badge>
                   </div>
                   <CardDescription>
@@ -194,13 +209,10 @@ const Dashboard = () => {
                   <Button 
                     variant="outline" 
                     className="border-[#5B9AA0] text-[#5B9AA0] hover:bg-[#5B9AA0] hover:text-white"
-                    onClick={() => {
-                      // Future navigation to editor
-                      toast.info("Biography editor coming soon");
-                    }}
+                    onClick={() => navigate(`/biography/${biography.id}/questionnaire`)}
                   >
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit
+                    <FileQuestion className="mr-2 h-4 w-4" />
+                    Questionnaire
                   </Button>
                   
                   <AlertDialog>

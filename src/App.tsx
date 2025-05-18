@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
+import BiographyQuestionnaire from "./pages/BiographyQuestionnaire";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // Create a query client instance that will be consistent across renders
@@ -27,6 +28,11 @@ const App = () => {
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/biography/:biographyId/questionnaire" element={
+              <ProtectedRoute>
+                <BiographyQuestionnaire />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

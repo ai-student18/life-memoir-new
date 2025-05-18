@@ -36,6 +36,66 @@ export type Database = {
         }
         Relationships: []
       }
+      biography_answers: {
+        Row: {
+          answer_text: string | null
+          biography_id: string
+          id: string
+          question_id: string
+          updated_at: string
+        }
+        Insert: {
+          answer_text?: string | null
+          biography_id: string
+          id?: string
+          question_id: string
+          updated_at?: string
+        }
+        Update: {
+          answer_text?: string | null
+          biography_id?: string
+          id?: string
+          question_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "biography_answers_biography_id_fkey"
+            columns: ["biography_id"]
+            isOneToOne: false
+            referencedRelation: "biographies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "biography_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "biography_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      biography_questions: {
+        Row: {
+          created_at: string
+          id: string
+          question_order: number
+          question_text: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          question_order: number
+          question_text: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          question_order?: number
+          question_text?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
