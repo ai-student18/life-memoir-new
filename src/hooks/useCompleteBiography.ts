@@ -1,45 +1,53 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useState } from "react";
 import { showErrorToast, showSuccessToast } from "@/utils/errorHandling";
+import { safeAsync } from "@/utils/errorHandler";
+import { PostgrestError } from "@supabase/supabase-js";
 
 export const useCompleteBiography = () => {
   const navigate = useNavigate();
   const [isCompleting, setIsCompleting] = useState(false);
 
-  const completeBiography = async (biographyId: string) => {
+  const completeBiography = async (biographyId: string | undefined) => {
     if (!biographyId) {
-      showErrorToast("מזהה ביוגרפיה חסר");
+      showErrorToast("Biography ID is missing. Cannot complete.", "Error");
       return;
     }
     
     setIsCompleting(true);
     
-    try {
-      // Update biography status to indicate questionnaire completion
-      const { error } = await supabase
+    const [data, error] = await safeAsync(
+      supabase
         .from("biographies")
         .update({ status: "QuestionnaireCompleted", updated_at: new Date().toISOString() })
-        .eq("id", biographyId);
-        
-      if (error) {
-        throw error;
+        .eq("id", biographyId)
+        .select()
+        .single() // Assuming you want to get the updated record back
+        .then(({ data, error }) => {
+          if (error) throw error;
+          if (!data) throw new Error("Failed to update biography, no data returned.");
+          return data;
+        }),
+      {
+        errorMessage: "Failed to mark biography as complete",
+        showToast: false // Custom handling in then/catch or here
       }
-      
-      // Show success message
-      showSuccessToast("השאלון הושלם בהצלחה!");
-      
-      // Navigate to dashboard after successful update
+    );
+
+    setIsCompleting(false);
+
+    if (error) {
+      // safeAsync would have already logged the error to console
+      // Show a specific toast for this operation's failure
+      showErrorToast(error, "Error Updating Biography Status");
+    } else {
+      showSuccessToast("Questionnaire completed successfully!");
       navigate(`/dashboard`);
-      
-    } catch (error) {
-      console.error("Error updating biography status:", error);
-      showErrorToast(error, "שגיאה בעדכון סטטוס הביוגרפיה");
-    } finally {
-      setIsCompleting(false);
     }
+    // Return data or error if needed by the caller
+    return { data, error }; 
   };
 
   return { completeBiography, isCompleting };
