@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import { Answer } from "@/types/questionnaire";
+import { handleApiError, showErrorToast, showSuccessToast } from "@/utils/errorHandling";
 
 export const useQuestionnaireAnswers = (biographyId: string | undefined) => {
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
@@ -12,7 +13,7 @@ export const useQuestionnaireAnswers = (biographyId: string | undefined) => {
   const { data: existingAnswers, isLoading, error } = useQuery({
     queryKey: ["biography_answers", biographyId],
     queryFn: async () => {
-      if (!biographyId) throw new Error("No biography ID provided");
+      if (!biographyId) throw new Error("אין מזהה ביוגרפיה");
       
       const { data, error } = await supabase
         .from("biography_answers")
@@ -23,6 +24,8 @@ export const useQuestionnaireAnswers = (biographyId: string | undefined) => {
       return data as Answer[];
     },
     enabled: !!biographyId,
+    retry: 2,
+    refetchOnWindowFocus: false,
   });
 
   // Update an answer
@@ -46,7 +49,13 @@ export const useQuestionnaireAnswers = (biographyId: string | undefined) => {
       
       // Invalidate related queries to refetch the data
       queryClient.invalidateQueries({ queryKey: ["biography_answers", biographyId] });
+      
+      showSuccessToast("התשובה נשמרה בהצלחה");
     },
+    onError: (error) => {
+      const errorMessage = handleApiError(error);
+      showErrorToast(errorMessage, "שגיאה בשמירת התשובה");
+    }
   });
 
   // Process existing answers into a map for easy access

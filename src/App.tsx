@@ -10,36 +10,52 @@ import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import BiographyQuestionnaire from "./pages/BiographyQuestionnaire";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ErrorBoundary from "./components/ErrorBoundary";
 
-// Create a query client instance that will be consistent across renders
-const queryClient = new QueryClient();
+// Create a query client instance with better error and retry configuration
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      retryDelay: attempt => Math.min(attempt > 1 ? 2000 : 1000, 30000),
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: true,
+    },
+    mutations: {
+      retry: 1,
+      retryDelay: 1000,
+    },
+  },
+});
 
 // Main App component
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
-          <Sonner />
-          <Toaster />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/biography/:biographyId/questionnaire" element={
-              <ProtectedRoute>
-                <BiographyQuestionnaire />
-              </ProtectedRoute>
-            } />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
+      <ErrorBoundary>
+        <BrowserRouter>
+          <AuthProvider>
+            <Sonner />
+            <Toaster />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/biography/:biographyId/questionnaire" element={
+                <ProtectedRoute>
+                  <BiographyQuestionnaire />
+                </ProtectedRoute>
+              } />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </ErrorBoundary>
     </QueryClientProvider>
   );
 };

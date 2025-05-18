@@ -1,9 +1,11 @@
 
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Question, Answer } from "@/types/questionnaire";
-import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { biographyAnswerSchema, createFormSchema } from "@/utils/formValidation";
+import { showErrorToast } from "@/utils/errorHandling";
 
 interface UseQuestionnaireFormProps {
   questions: Question[];
@@ -28,6 +30,7 @@ export const useQuestionnaireForm = ({
     defaultValues: {
       answer: "",
     },
+    resolver: zodResolver(biographyAnswerSchema),
   });
 
   const currentQuestion = questions[currentQuestionIndex];
@@ -58,23 +61,26 @@ export const useQuestionnaireForm = ({
       };
       
       await onSaveAnswer(answer);
-      toast.success("תשובה נשמרה בהצלחה");
     } catch (error) {
       console.error("Error saving answer:", error);
-      toast.error("שגיאה בשמירת התשובה");
+      showErrorToast(error, "שגיאה בשמירת התשובה");
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleNext = async () => {
-    await form.handleSubmit(handleSaveAnswer)();
-    
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    } else {
-      // We're at the last question
-      onComplete();
+    try {
+      await form.handleSubmit(handleSaveAnswer)();
+      
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+      } else {
+        // We're at the last question
+        onComplete();
+      }
+    } catch (error) {
+      showErrorToast(error, "שגיאה במעבר לשאלה הבאה");
     }
   };
 
@@ -85,8 +91,22 @@ export const useQuestionnaireForm = ({
   };
 
   const handleSaveAndExit = async () => {
-    await form.handleSubmit(handleSaveAnswer)();
-    navigate(`/dashboard`);
+    try {
+      await form.handleSubmit(handleSaveAnswer)();
+      navigate(`/dashboard`);
+    } catch (error) {
+      showErrorToast(error, "שגיאה בשמירה ויציאה");
+    }
+  };
+  
+  const jumpToQuestion = (index: number) => {
+    if (index >= 0 && index < questions.length) {
+      form.handleSubmit(handleSaveAnswer)().then(() => {
+        setCurrentQuestionIndex(index);
+      }).catch((error) => {
+        showErrorToast(error, "שגיאה במעבר לשאלה");
+      });
+    }
   };
 
   return {
@@ -98,5 +118,7 @@ export const useQuestionnaireForm = ({
     handleNext,
     handlePrevious,
     handleSaveAndExit,
+    jumpToQuestion,
+    totalQuestions: questions.length,
   };
 };

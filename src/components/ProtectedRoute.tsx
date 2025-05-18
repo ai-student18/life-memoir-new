@@ -2,6 +2,8 @@
 import { useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -18,8 +20,11 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }, [user, isLoading]);
 
   if (isLoading) {
-    // You could add a loading spinner here
-    return <div className="h-screen flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <LoadingSpinner size="lg" text="טוען..." />
+      </div>
+    );
   }
 
   if (!user) {
@@ -27,7 +32,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  return <>{children}</>;
+  return <ErrorBoundary>{children}</ErrorBoundary>;
 };
 
 export default ProtectedRoute;
