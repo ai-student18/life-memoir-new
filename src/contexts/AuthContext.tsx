@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
+import { toast } from "sonner";
 
 type AuthContextType = {
   session: Session | null;
@@ -28,11 +29,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
-        // If the user just signed in, redirect to home
+        // If the user just signed in, redirect to dashboard
         if (event === 'SIGNED_IN') {
-          navigate('/');
+          navigate('/dashboard');
+          toast.success("Successfully signed in");
         } else if (event === 'SIGNED_OUT') {
           navigate('/auth');
+          toast.success("Successfully signed out");
         }
       }
     );
