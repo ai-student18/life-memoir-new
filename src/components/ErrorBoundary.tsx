@@ -1,6 +1,7 @@
 
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -36,12 +37,13 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
           <p className="text-sm text-center mb-4">
             אנו מצטערים, אירעה שגיאה בעת טעינת התוכן.
           </p>
-          <button
-            className="px-4 py-2 bg-red-100 hover:bg-red-200 rounded-md text-sm transition-colors"
+          <Button
+            variant="outline"
+            className="px-4 py-2 border border-red-300 hover:bg-red-100 rounded-md text-sm transition-colors"
             onClick={() => this.setState({ hasError: false })}
           >
             נסה שוב
-          </button>
+          </Button>
         </div>
       );
     }
