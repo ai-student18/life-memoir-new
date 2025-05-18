@@ -1,168 +1,130 @@
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import React, { useState, useEffect } from "react";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { toast } from "@/components/ui/sonner";
-import { LogOut, Settings } from 'lucide-react';
-import { useStoryEnhancer } from '@/hooks/useStoryEnhancer';
-import StoryInputSection from '@/components/dashboard/StoryInputSection';
-import StoryOutputSection from '@/components/dashboard/StoryOutputSection';
-import SaveStoryDialog from '@/components/dashboard/SaveStoryDialog';
-import AISettingsDialog from '@/components/dashboard/AISettingsDialog';
-import { StoriesProvider, useStories } from '@/context/StoriesContext';
+import NavBar from "@/components/NavBar";
 
-// Main Dashboard content that uses the context
-const DashboardContent = () => {
-  const [session, setSession] = useState(null);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
-  const [systemInstruction, setSystemInstruction] = useState(
-    'Enhance this life story with improved narrative flow, correct any grammar or spelling errors, and make it more engaging to read.'
-  );
-  const navigate = useNavigate();
-  
-  const { 
-    storyInput, 
-    setStoryInput,
-    enhancedStory, 
-    setEnhancedStory,
-    lastSaved,
-    storyTitle,
-    setStoryTitle,
-    saveStory,
-    isSaving
-  } = useStories();
-  
-  // Use our enhanced hook with the system instruction
-  const { enhanceStory, isEnhancing, error } = useStoryEnhancer({ 
-    systemInstruction 
-  });
+const Dashboard = () => {
+  const [storyInput, setStoryInput] = useState("");
+  const [editedStory, setEditedStory] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
+  // Auto-save effect
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        navigate('/auth');
-        return;
-      }
-      setSession(session);
-    });
+    if (storyInput.trim().length > 0) {
+      const saveTimer = setTimeout(() => {
+        handleAutoSave();
+      }, 2000);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        if (!session) navigate('/auth');
-      }
-    );
-
-    return () => {
-      subscription?.unsubscribe();
-    };
-  }, [navigate]);
-
-  // Load saved system instruction if available
-  useEffect(() => {
-    const savedInstruction = localStorage.getItem('systemInstruction');
-    if (savedInstruction) {
-      setSystemInstruction(savedInstruction);
+      return () => clearTimeout(saveTimer);
     }
-  }, []);
+  }, [storyInput]);
 
-  const handleEnhanceStory = async () => {
-    if (!storyInput || storyInput.trim() === '') {
-      toast.error("Please enter your story before enhancing");
+  // Mock auto-save function - would connect to backend in production
+  const handleAutoSave = () => {
+    setIsSaving(true);
+    
+    // Simulate saving delay
+    setTimeout(() => {
+      setIsSaving(false);
+      // In a real app, this would save to a database
+    }, 1000);
+  };
+
+  // Mock AI processing - would connect to AI service in production
+  const enhanceStory = () => {
+    if (!storyInput.trim()) {
+      toast("Please enter your story first", {
+        description: "The text area appears to be empty."
+      });
       return;
     }
+
+    setIsProcessing(true);
     
-    try {
-      const enhancedText = await enhanceStory(storyInput);
-      setEnhancedStory(enhancedText);
-      toast.success("Your story has been enhanced!");
-    } catch (error) {
-      console.error("Error enhancing story:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to enhance your story. Please try again.");
-    }
-  };
-
-  const saveSystemInstruction = () => {
-    localStorage.setItem('systemInstruction', systemInstruction);
-    setIsSettingsOpen(false);
-    toast.success("AI instruction saved!");
-  };
-
-  const handleSaveStory = async () => {
-    await saveStory();
-    setIsSaveDialogOpen(false);
-  };
-
-  const handleSignOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error(error.message || "Failed to sign out");
-    }
+    // Simulate AI processing delay
+    setTimeout(() => {
+      // Mock AI enhancement - in production this would call an AI service
+      const enhancedText = storyInput
+        .split('.')
+        .map(sentence => {
+          // Simple mock enhancement logic
+          const trimmed = sentence.trim();
+          if (trimmed.length > 0) {
+            return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+          }
+          return "";
+        })
+        .filter(s => s.length > 0)
+        .join('. ');
+      
+      setEditedStory(enhancedText);
+      setIsProcessing(false);
+      toast("Your story has been enhanced!", {
+        description: "The AI has processed your text."
+      });
+    }, 1500);
   };
 
   return (
     <div className="min-h-screen bg-white">
-      <header className="bg-white shadow-sm py-4 px-6 flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-memoir-darkGray">LifeMemoir Dashboard</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsSettingsOpen(true)}>
-            <Settings className="mr-2 h-4 w-4" />
-            AI Settings
-          </Button>
-          <Button variant="outline" onClick={handleSignOut}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Sign Out
-          </Button>
-        </div>
-      </header>
-      
-      <main className="container mx-auto p-6">
+      <NavBar />
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold text-center mb-8 text-memoir-darkGray">Story Dashboard</h1>
+        
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Story Input Section */}
-          <StoryInputSection 
-            storyInput={storyInput}
-            setStoryInput={setStoryInput}
-            lastSaved={lastSaved}
-            handleEnhanceStory={handleEnhanceStory}
-            isEnhancing={isEnhancing}
-            openSaveDialog={() => setIsSaveDialogOpen(true)}
-          />
-          
-          {/* Story Output Section */}
-          <StoryOutputSection enhancedStory={enhancedStory} />
-        </div>
-      </main>
-      
-      {/* Save Dialog */}
-      <SaveStoryDialog 
-        isOpen={isSaveDialogOpen}
-        onOpenChange={setIsSaveDialogOpen}
-        storyTitle={storyTitle}
-        setStoryTitle={setStoryTitle}
-        handleSaveStory={handleSaveStory}
-        isSaving={isSaving}
-      />
-      
-      {/* AI Settings Dialog */}
-      <AISettingsDialog 
-        isOpen={isSettingsOpen}
-        onOpenChange={setIsSettingsOpen}
-        systemInstruction={systemInstruction}
-        setSystemInstruction={setSystemInstruction}
-        saveSystemInstruction={saveSystemInstruction}
-      />
-    </div>
-  );
-};
+          {/* Text Input Section */}
+          <div className="flex flex-col">
+            <h2 className="text-xl font-semibold mb-3 text-memoir-darkGray">Your Story</h2>
+            <div className="relative h-full">
+              <Textarea
+                className="h-64 lg:h-[500px] resize-none text-base p-4 mb-4 font-sans border-2"
+                placeholder="Write or paste your life story here in Hebrew or English... Share your memories, experiences, and moments that defined your journey."
+                value={storyInput}
+                onChange={(e) => setStoryInput(e.target.value)}
+                dir="auto" // Automatically detects text direction (RTL for Hebrew)
+              />
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-500">
+                  {isSaving ? "Saving..." : "Draft saved"}
+                </span>
+                <Button 
+                  onClick={enhanceStory}
+                  disabled={isProcessing || !storyInput.trim()}
+                  className="bg-memoir-yellow hover:bg-memoir-yellow/90 text-memoir-darkGray font-medium"
+                >
+                  {isProcessing ? "Processing..." : "Enhance My Story"}
+                </Button>
+              </div>
+            </div>
+          </div>
 
-// Wrapper component that provides the StoriesContext
-const Dashboard = () => {
-  return (
-    <StoriesProvider>
-      <DashboardContent />
-    </StoriesProvider>
+          {/* AI Output Preview */}
+          <div className="flex flex-col">
+            <h2 className="text-xl font-semibold mb-3 text-memoir-darkGray">Your Edited Story</h2>
+            <Card className="glass-card h-64 lg:h-[500px] overflow-auto animate-fade-in">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg text-memoir-darkGray">AI Enhanced Version</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div dir="auto" className="whitespace-pre-line">
+                  {editedStory ? (
+                    editedStory
+                  ) : (
+                    <p className="text-gray-400 italic">
+                      Your enhanced story will appear here after processing...
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
