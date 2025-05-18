@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Upload, Wand2, BookOpen, Image } from 'lucide-react';
+import { Upload, Wand2, BookOpen } from 'lucide-react';
 
 const FeatureCard = ({ icon: Icon, title, description, delay }: { 
   icon: React.ElementType, 
@@ -29,7 +29,7 @@ const HowItWorksSection = () => {
           How It Works
         </h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <FeatureCard 
             icon={Upload}
             title="Upload Content"
@@ -39,23 +39,16 @@ const HowItWorksSection = () => {
           
           <FeatureCard 
             icon={Wand2}
-            title="Organize & Articulate Fluently"
-            description="Our platform helps organize your content and refines your narrative."
+            title="Organize & Analyze with AI"
+            description="Our AI helps organize your content and suggests narrative structures."
             delay="0.2s"
-          />
-          
-          <FeatureCard 
-            icon={Image}
-            title="Generate Photos"
-            description="Generate photos for your book or even of your loved ones using old photos."
-            delay="0.4s"
           />
           
           <FeatureCard 
             icon={BookOpen}
             title="Produce Your Book"
             description="Export a professional-quality book ready for printing or digital sharing."
-            delay="0.6s"
+            delay="0.4s"
           />
         </div>
       </div>
