@@ -1,11 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { Menu, X, LogIn } from 'lucide-react';
+import { Menu, X, LogIn, LogOut } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 const NavBar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, signOut } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -18,6 +21,11 @@ const NavBar = () => {
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    setIsMobileMenuOpen(false);
   };
 
   return (
@@ -43,11 +51,22 @@ const NavBar = () => {
           </div>
           
           <div className="flex items-center space-x-3">
-            <Button variant="outline" className="secondary-button">
-              <LogIn className="mr-2 h-4 w-4" />
-              Login
-            </Button>
-            <Button className="primary-button">Register</Button>
+            {user ? (
+              <Button variant="outline" className="secondary-button" onClick={handleSignOut}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" className="secondary-button" as={Link} to="/auth">
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Login
+                </Button>
+                <Button className="primary-button" as={Link} to="/auth" onClick={() => document.querySelector<HTMLButtonElement>('button[type="button"]')?.click()}>
+                  Register
+                </Button>
+              </>
+            )}
           </div>
         </div>
         
@@ -72,11 +91,25 @@ const NavBar = () => {
           <a href="#contact" className="py-2 text-memoir-darkGray hover:text-memoir-blueGray transition-colors">Contact</a>
           
           <div className="mt-6 space-y-3">
-            <Button variant="outline" className="w-full secondary-button">
-              <LogIn className="mr-2 h-4 w-4" />
-              Login
-            </Button>
-            <Button className="w-full primary-button">Register</Button>
+            {user ? (
+              <Button variant="outline" className="w-full secondary-button" onClick={handleSignOut}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" className="w-full secondary-button" as={Link} to="/auth" onClick={() => setIsMobileMenuOpen(false)}>
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Login
+                </Button>
+                <Button className="w-full primary-button" as={Link} to="/auth" onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setTimeout(() => document.querySelector<HTMLButtonElement>('button[type="button"]')?.click(), 100);
+                }}>
+                  Register
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
