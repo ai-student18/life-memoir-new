@@ -1,6 +1,17 @@
-
 import { toast } from "sonner";
-import { extractErrorMessage } from "./errorHandling";
+import { extractErrorMessage, ApiError, ValidationError, isApiError, isValidationError } from "./errorHandling";
+
+/**
+ * Configuration options for error handling
+ */
+export interface ErrorHandlerOptions<T> {
+  errorMessage?: string;
+  showToast?: boolean;
+  fallbackData?: T;
+  onError?: (error: unknown) => void;
+  retryCount?: number;
+  retryDelay?: number;
+}
 
 /**
  * Centralized error handling for async operations
@@ -10,70 +21,84 @@ import { extractErrorMessage } from "./errorHandling";
  */
 export async function safeAsync<T>(
   promise: Promise<T>,
-  options: {
-    errorMessage?: string;
-    showToast?: boolean;
-    fallbackData?: T;
-    onError?: (error: unknown) => void;
-  } = {}
+  options: ErrorHandlerOptions<T> = {}
 ): Promise<[T | null, unknown]> {
   const {
     errorMessage = "An error occurred",
     showToast = true,
     fallbackData = null,
     onError,
+    retryCount = 0,
+    retryDelay = 1000,
   } = options;
 
-  try {
-    const data = await promise;
-    return [data, null];
-  } catch (error) {
-    console.error("Error in safeAsync:", error);
-    
-    if (onError) {
-      onError(error);
-    }
+  let attempts = 0;
+  let lastError: unknown;
 
-    if (showToast) {
-      toast.error(errorMessage, {
-        description: extractErrorMessage(error),
-      });
-    }
+  while (attempts <= retryCount) {
+    try {
+      const data = await promise;
+      return [data, null];
+    } catch (error) {
+      lastError = error;
+      attempts++;
 
-    return [fallbackData as T, error];
+      if (onError) {
+        onError(error);
+      }
+
+      if (showToast) {
+        const message = isApiError(error) 
+          ? `${errorMessage} (${error.status})`
+          : errorMessage;
+        
+        toast.error(message, {
+          description: extractErrorMessage(error),
+        });
+      }
+
+      if (attempts <= retryCount) {
+        await new Promise(resolve => setTimeout(resolve, retryDelay * attempts));
+        continue;
+      }
+    }
   }
+
+  return [fallbackData as T, lastError];
 }
 
 /**
  * Wrapper for fetch operations with error handling and type safety
  */
-export async function safeFetch<T = any>(
+export async function safeFetch<T>(
   url: string,
   options?: RequestInit,
   errorConfig?: {
     errorMessage?: string;
     showToast?: boolean;
+    retryCount?: number;
+    retryDelay?: number;
   }
 ): Promise<[T | null, unknown]> {
-  try {
-    const response = await fetch(url, options);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
+  return safeAsync<T>(
+    fetch(url, options).then(async (response) => {
+      if (!response.ok) {
+        const error: ApiError = {
+          message: `HTTP error! Status: ${response.status}`,
+          status: response.status,
+          code: response.status.toString(),
+        };
+        throw error;
+      }
+      return response.json() as Promise<T>;
+    }),
+    {
+      errorMessage: errorConfig?.errorMessage || "Failed to fetch data",
+      showToast: errorConfig?.showToast,
+      retryCount: errorConfig?.retryCount,
+      retryDelay: errorConfig?.retryDelay,
     }
-    
-    const data = await response.json();
-    return [data as T, null];
-  } catch (error) {
-    if (errorConfig?.showToast !== false) {
-      toast.error(errorConfig?.errorMessage || "Failed to fetch data", {
-        description: extractErrorMessage(error),
-      });
-    }
-    
-    console.error("Fetch error:", error);
-    return [null, error];
-  }
+  );
 }
 
 /**
@@ -85,7 +110,7 @@ export async function retry<T>(
     retries?: number;
     delay?: number;
     maxDelay?: number;
-    onRetry?: (attempt: number, error: any) => void;
+    onRetry?: (attempt: number, error: unknown) => void;
   } = {}
 ): Promise<T> {
   const { 
@@ -95,7 +120,7 @@ export async function retry<T>(
     onRetry 
   } = options;
   
-  let lastError: any;
+  let lastError: unknown;
   
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
