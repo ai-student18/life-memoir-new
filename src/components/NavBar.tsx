@@ -58,13 +58,17 @@ const NavBar = () => {
               </Button>
             ) : (
               <>
-                <Button variant="outline" className="secondary-button" as={Link} to="/auth">
-                  <LogIn className="mr-2 h-4 w-4" />
-                  Login
-                </Button>
-                <Button className="primary-button" as={Link} to="/auth" onClick={() => document.querySelector<HTMLButtonElement>('button[type="button"]')?.click()}>
-                  Register
-                </Button>
+                <Link to="/auth">
+                  <Button variant="outline" className="secondary-button">
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Login
+                  </Button>
+                </Link>
+                <Link to="/auth">
+                  <Button className="primary-button" onClick={() => document.querySelector<HTMLButtonElement>('button[type="button"]')?.click()}>
+                    Register
+                  </Button>
+                </Link>
               </>
             )}
           </div>
@@ -98,16 +102,20 @@ const NavBar = () => {
               </Button>
             ) : (
               <>
-                <Button variant="outline" className="w-full secondary-button" as={Link} to="/auth" onClick={() => setIsMobileMenuOpen(false)}>
-                  <LogIn className="mr-2 h-4 w-4" />
-                  Login
-                </Button>
-                <Button className="w-full primary-button" as={Link} to="/auth" onClick={() => {
+                <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button variant="outline" className="w-full secondary-button">
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Login
+                  </Button>
+                </Link>
+                <Link to="/auth" onClick={() => {
                   setIsMobileMenuOpen(false);
                   setTimeout(() => document.querySelector<HTMLButtonElement>('button[type="button"]')?.click(), 100);
                 }}>
-                  Register
-                </Button>
+                  <Button className="w-full primary-button">
+                    Register
+                  </Button>
+                </Link>
               </>
             )}
           </div>
