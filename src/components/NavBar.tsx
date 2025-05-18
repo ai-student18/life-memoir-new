@@ -1,11 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
-import { Menu, X, LogIn, Book } from 'lucide-react';
+import { Menu, X, LogIn } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 
 const NavBar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -13,20 +17,45 @@ const NavBar = () => {
     };
 
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    
+    // Check for active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user || null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user || null);
+      }
+    );
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      subscription?.unsubscribe();
+    };
   }, []);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
+  const handleAuthClick = () => {
+    navigate('/auth');
+    setIsMobileMenuOpen(false);
+  };
+
+  const handleDashboardClick = () => {
+    navigate('/dashboard');
+    setIsMobileMenuOpen(false);
+  };
+
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 px-6 md:px-12 h-[72px] transition-all duration-300 ${isScrolled ? 'bg-white bg-opacity-80 backdrop-blur-md shadow-sm' : 'bg-transparent'}`}>
+    <nav className={`fixed top-0 left-0 right-0 z-50 px-6 md:px-12 h-[72px] transition-all duration-300 bg-white shadow-sm`}>
       <div className="max-w-7xl mx-auto flex items-center justify-between h-full">
         {/* Logo and Website Name */}
         <div className="flex items-center">
-          <div className="h-10 w-10 bg-memoir-blueGray rounded-full mr-3 flex items-center justify-center">
-            <Book className="text-white" size={20} />
+          <div className="h-10 w-10 mr-3 flex items-center justify-center">
+            <img src="/lovable-uploads/06435c8d-3aa2-4f47-b98f-e959cedabf1f.png" alt="LifeMemoir Logo" className="w-10 h-10" />
           </div>
           <h1 className="text-xl font-bold text-memoir-darkGray">LifeMemoir</h1>
         </div>
@@ -43,11 +72,19 @@ const NavBar = () => {
           </div>
           
           <div className="flex items-center space-x-3">
-            <Button variant="outline" className="secondary-button">
-              <LogIn className="mr-2 h-4 w-4" />
-              Login
-            </Button>
-            <Button className="primary-button">Register</Button>
+            {user ? (
+              <Button onClick={handleDashboardClick} className="primary-button">
+                Dashboard
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" className="secondary-button" onClick={handleAuthClick}>
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Login
+                </Button>
+                <Button className="primary-button" onClick={handleAuthClick}>Register</Button>
+              </>
+            )}
           </div>
         </div>
         
@@ -72,11 +109,19 @@ const NavBar = () => {
           <a href="#contact" className="py-2 text-memoir-darkGray hover:text-memoir-blueGray transition-colors">Contact</a>
           
           <div className="mt-6 space-y-3">
-            <Button variant="outline" className="w-full secondary-button">
-              <LogIn className="mr-2 h-4 w-4" />
-              Login
-            </Button>
-            <Button className="w-full primary-button">Register</Button>
+            {user ? (
+              <Button className="w-full primary-button" onClick={handleDashboardClick}>
+                Dashboard
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" className="w-full secondary-button" onClick={handleAuthClick}>
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Login
+                </Button>
+                <Button className="w-full primary-button" onClick={handleAuthClick}>Register</Button>
+              </>
+            )}
           </div>
         </div>
       </div>
