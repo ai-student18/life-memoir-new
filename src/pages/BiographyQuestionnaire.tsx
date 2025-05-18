@@ -106,18 +106,23 @@ const BiographyQuestionnaire = () => {
   const handleComplete = () => {
     toast.success("השאלון הושלם בהצלחה!");
     // Update biography status to indicate questionnaire completion
-    supabase
-      .from("biographies")
-      .update({ status: "QuestionnaireCompleted" })
-      .eq("id", biographyId)
-      .then(() => {
-        // Navigate to dashboard or next step
-        navigate(`/dashboard`);
-      })
-      .catch((error) => {
-        console.error("Error updating biography status:", error);
-        toast.error("שגיאה בעדכון סטטוס הביוגרפיה");
-      });
+    try {
+      supabase
+        .from("biographies")
+        .update({ status: "QuestionnaireCompleted" })
+        .eq("id", biographyId)
+        .then(() => {
+          // Navigate to dashboard or next step
+          navigate(`/dashboard`);
+        })
+        .catch((error) => {
+          console.error("Error updating biography status:", error);
+          toast.error("שגיאה בעדכון סטטוס הביוגרפיה");
+        });
+    } catch (error) {
+      console.error("Error in complete handler:", error);
+      toast.error("שגיאה בעדכון סטטוס הביוגרפיה");
+    }
   };
 
   const isLoading = biographyLoading || questionsLoading || answersLoading;
