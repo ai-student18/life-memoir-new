@@ -1,16 +1,13 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Pencil, Book } from 'lucide-react';
-
 const HeroSection = () => {
-  return (
-    <section id="hero" className="relative h-[60vh] min-h-[500px] flex items-center justify-center overflow-hidden pt-[72px]">
+  return <section id="hero" className="relative h-[60vh] min-h-[500px] flex items-center justify-center overflow-hidden pt-[72px]">
       {/* Background Image */}
       <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{
-        backgroundImage: "url('/lovable-uploads/582c47b7-d36c-4beb-afb9-519605dbe4da.png')",
-        filter: "brightness(0.7)"
-      }}></div>
+      backgroundImage: "url('/lovable-uploads/582c47b7-d36c-4beb-afb9-519605dbe4da.png')",
+      filter: "brightness(0.7)"
+    }}></div>
       
       {/* Single Overlay Layer - Using only one overlay with appropriate opacity */}
       <div className="absolute inset-0 bg-black bg-opacity-50"></div>
@@ -35,14 +32,12 @@ const HeroSection = () => {
           </Button>
           
           {/* Secondary button - Improved visibility with dark blue background */}
-          <Button variant="outline" className="secondary-button bg-[#1a365d] bg-opacity-80 text-white border-white text-lg px-6 py-6 hover:bg-[#1a365d] hover:bg-opacity-90">
+          <Button variant="outline" className="secondary-button bg-opacity-80 border-white text-lg px-6 py-6 hover:bg-opacity-90 bg-sky-600 hover:bg-sky-500 text-black/[0.31]">
             <Book className="mr-2 h-5 w-5" />
             Learn More
           </Button>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
-
 export default HeroSection;
