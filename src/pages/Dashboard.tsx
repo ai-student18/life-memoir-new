@@ -136,7 +136,7 @@ const Dashboard = () => {
       case 'draft':
         return 'Draft';
       case 'questionnairecompleted':
-        return 'Questionnaire Completed';
+        return 'Completed';
       case 'published':
         return 'Published';
       default:
