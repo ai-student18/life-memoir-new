@@ -102,25 +102,26 @@ const BiographyQuestionnaire = () => {
     await saveAnswerMutation.mutateAsync(answer);
   };
 
-  // Function to handle completing the questionnaire
-  const handleComplete = () => {
+  // Function to handle completing the questionnaire - refactored to use async/await
+  const handleComplete = async () => {
     toast.success("השאלון הושלם בהצלחה!");
-    // Update biography status to indicate questionnaire completion
+    
     try {
-      supabase
+      // Update biography status to indicate questionnaire completion
+      const { error } = await supabase
         .from("biographies")
         .update({ status: "QuestionnaireCompleted" })
-        .eq("id", biographyId)
-        .then(() => {
-          // Navigate to dashboard or next step
-          navigate(`/dashboard`);
-        })
-        .catch((error) => {
-          console.error("Error updating biography status:", error);
-          toast.error("שגיאה בעדכון סטטוס הביוגרפיה");
-        });
+        .eq("id", biographyId);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Navigate to dashboard after successful update
+      navigate(`/dashboard`);
+      
     } catch (error) {
-      console.error("Error in complete handler:", error);
+      console.error("Error updating biography status:", error);
       toast.error("שגיאה בעדכון סטטוס הביוגרפיה");
     }
   };

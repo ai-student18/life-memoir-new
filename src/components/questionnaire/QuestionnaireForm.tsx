@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Save } from "lucide-react";
 import { Question, Answer } from "@/types/questionnaire";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 
 interface QuestionnaireFormProps {
   questions: Question[];
@@ -31,20 +30,24 @@ const QuestionnaireForm = ({
   
   const form = useForm({
     defaultValues: {
-      answer: answers[questions[currentQuestionIndex]?.id]?.answer_text || "",
+      answer: "",
     },
   });
 
   const currentQuestion = questions[currentQuestionIndex];
 
-  // Update form values when current question changes
-  useState(() => {
-    if (currentQuestion) {
+  // Update form values when current question or answers change
+  useEffect(() => {
+    if (currentQuestion && answers[currentQuestion.id]) {
       form.reset({
         answer: answers[currentQuestion.id]?.answer_text || "",
       });
+    } else if (currentQuestion) {
+      form.reset({
+        answer: "",
+      });
     }
-  });
+  }, [currentQuestion, answers, form]);
 
   const handleSaveAnswer = async (data: { answer: string }) => {
     if (!currentQuestion) return;
@@ -73,9 +76,6 @@ const QuestionnaireForm = ({
     
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
-      form.reset({
-        answer: answers[questions[currentQuestionIndex + 1]?.id]?.answer_text || "",
-      });
     } else {
       // We're at the last question
       onComplete();
@@ -85,9 +85,6 @@ const QuestionnaireForm = ({
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(currentQuestionIndex - 1);
-      form.reset({
-        answer: answers[questions[currentQuestionIndex - 1]?.id]?.answer_text || "",
-      });
     }
   };
 
