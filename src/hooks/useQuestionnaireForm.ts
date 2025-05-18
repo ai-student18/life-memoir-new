@@ -1,21 +1,17 @@
+
 import { useState, useEffect } from "react";
-import { useForm, FieldValues, SubmitHandler } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Question, Answer } from "@/types/questionnaire";
 import { useNavigate } from "react-router-dom";
-import { biographyAnswerSchema } from "@/utils/formValidation";
+import { biographyAnswerSchema, createFormSchema } from "@/utils/formValidation";
 import { showErrorToast } from "@/utils/errorHandling";
-import { safeAsync } from "@/utils/errorHandler";
-
-interface QuestionnaireFormData {
-  answer: string;
-}
 
 interface UseQuestionnaireFormProps {
   questions: Question[];
   biographyId: string;
   answers: Record<string, Answer>;
-  onSaveAnswer: (answer: Answer) => Promise<unknown>;
+  onSaveAnswer: (answer: Answer) => Promise<void>;
   onComplete: () => void;
 }
 
@@ -27,10 +23,10 @@ export const useQuestionnaireForm = ({
   onComplete
 }: UseQuestionnaireFormProps) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const navigate = useNavigate();
   
-  const form = useForm<QuestionnaireFormData>({
+  const form = useForm({
     defaultValues: {
       answer: "",
     },
@@ -39,50 +35,51 @@ export const useQuestionnaireForm = ({
 
   const currentQuestion = questions[currentQuestionIndex];
 
+  // Update form values when current question or answers change
   useEffect(() => {
-    if (currentQuestion) {
+    if (currentQuestion && answers[currentQuestion.id]) {
       form.reset({
         answer: answers[currentQuestion.id]?.answer_text || "",
+      });
+    } else if (currentQuestion) {
+      form.reset({
+        answer: "",
       });
     }
   }, [currentQuestion, answers, form]);
 
-  const processSaveAnswer: SubmitHandler<QuestionnaireFormData> = async (data) => {
+  const handleSaveAnswer = async (data: { answer: string }) => {
     if (!currentQuestion) return;
     
-    setIsSubmitting(true);
-    
-    const answerToSave: Answer = {
-      biography_id: biographyId,
-      question_id: currentQuestion.id,
-      answer_text: data.answer,
-    };
+    setIsSaving(true);
     
     try {
-      await onSaveAnswer(answerToSave);
+      const answer: Answer = {
+        biography_id: biographyId,
+        question_id: currentQuestion.id,
+        answer_text: data.answer,
+      };
+      
+      await onSaveAnswer(answer);
     } catch (error) {
-      console.error("Error during onSaveAnswer call from useQuestionnaireForm:", error);
-      showErrorToast(error, "שגיאה בתהליך שמירת התשובה");
+      console.error("Error saving answer:", error);
+      showErrorToast(error, "שגיאה בשמירת התשובה");
     } finally {
-      setIsSubmitting(false);
+      setIsSaving(false);
     }
   };
 
   const handleNext = async () => {
-    const isValid = await form.trigger();
-    if (!isValid) return;
-
-    const [, error] = await safeAsync(form.handleSubmit(processSaveAnswer)(), {
-      showToast: false,
-    });
-
-    if (!error) {
+    try {
+      await form.handleSubmit(handleSaveAnswer)();
+      
       if (currentQuestionIndex < questions.length - 1) {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
       } else {
+        // We're at the last question
         onComplete();
       }
-    } else {
+    } catch (error) {
       showErrorToast(error, "שגיאה במעבר לשאלה הבאה");
     }
   };
@@ -94,34 +91,21 @@ export const useQuestionnaireForm = ({
   };
 
   const handleSaveAndExit = async () => {
-    const isValid = await form.trigger();
-    if (!isValid) return;
-
-    const [, error] = await safeAsync(form.handleSubmit(processSaveAnswer)(), {
-      showToast: false,
-    });
-
-    if (!error) {
+    try {
+      await form.handleSubmit(handleSaveAnswer)();
       navigate(`/dashboard`);
-    } else {
+    } catch (error) {
       showErrorToast(error, "שגיאה בשמירה ויציאה");
     }
   };
   
-  const jumpToQuestion = async (index: number) => {
+  const jumpToQuestion = (index: number) => {
     if (index >= 0 && index < questions.length) {
-      const isValid = await form.trigger();
-      if (!isValid && index > currentQuestionIndex) return;
-
-      const [, error] = await safeAsync(form.handleSubmit(processSaveAnswer)(), {
-        showToast: false,
-      });
-
-      if (!error) {
+      form.handleSubmit(handleSaveAnswer)().then(() => {
         setCurrentQuestionIndex(index);
-      } else {
+      }).catch((error) => {
         showErrorToast(error, "שגיאה במעבר לשאלה");
-      }
+      });
     }
   };
 
@@ -129,8 +113,8 @@ export const useQuestionnaireForm = ({
     form,
     currentQuestion,
     currentQuestionIndex,
-    isSubmitting,
-    processSaveAnswer,
+    isSaving,
+    handleSaveAnswer,
     handleNext,
     handlePrevious,
     handleSaveAndExit,
