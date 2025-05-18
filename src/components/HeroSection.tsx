@@ -9,31 +9,26 @@ const HeroSection = () => {
       {/* Background Image */}
       <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{
         backgroundImage: "url('/lovable-uploads/582c47b7-d36c-4beb-afb9-519605dbe4da.png')",
-        filter: "brightness(0.7)"
+        filter: "brightness(0.8)"
       }}></div>
       
-      {/* Single overlay layer with appropriate opacity */}
-      <div className="absolute inset-0 bg-black bg-opacity-50"></div>
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-black bg-opacity-40"></div>
       
-      {/* Content - Single instance only */}
-      <div className="relative z-10 text-center max-w-3xl px-6">
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-white drop-shadow-lg">
+      {/* Content */}
+      <div className="relative z-10 text-center max-w-3xl px-6 animate-fade-in-up">
+        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-white drop-shadow-lg">
           Write your life story with ease and warmth
         </h1>
-        
-        <p className="text-lg md:text-xl mb-10 text-white drop-shadow-md">
+        <p className="text-lg md:text-xl mb-8 text-white drop-shadow-md">
           The platform that turns messy memories into a professional, heartfelt book
         </p>
-        
-        <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-          {/* Primary button */}
+        <div className="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4">
           <Button className="primary-button text-lg px-6 py-6">
             <Pencil className="mr-2 h-5 w-5" />
             Start Writing
           </Button>
-          
-          {/* Secondary button - Dark blue background for better visibility */}
-          <Button variant="outline" className="secondary-button bg-[#1a365d] text-white border-white text-lg px-6 py-6 hover:bg-[#1a365d] hover:bg-opacity-90">
+          <Button variant="outline" className="secondary-button bg-opacity-20 bg-white text-white border-white text-lg px-6 py-6 hover:bg-white hover:bg-opacity-30">
             <Book className="mr-2 h-5 w-5" />
             Learn More
           </Button>
