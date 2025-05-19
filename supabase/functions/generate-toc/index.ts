@@ -2,8 +2,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../_shared/cors.ts";
 
-// Note: Make sure the key in Supabase secrets uses the correct name format
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GEMINI-API-KEY");
+// Get environment variables
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 
@@ -139,13 +139,11 @@ function createSystemPrompt(): string {
   - Format as: [{"title": "Chapter Title", "description": "Brief description"}]`;
 }
 
-// Call Gemini API with retry logic
-async function generateTOCWithGemini(
-  formattedQA: QuestionAnswer[]
-): Promise<any[]> {
-  if (!GEMINI_API_KEY) {
-    console.error("Gemini API key not configured");
-    throw new Error("Gemini API key not configured");
+// Call OpenAI API with retry logic
+async function generateTOCWithOpenAI(formattedQA: QuestionAnswer[]): Promise<any[]> {
+  if (!OPENAI_API_KEY) {
+    console.error("OpenAI API key not configured");
+    throw new Error("OpenAI API key not configured");
   }
 
   // Maximum number of retries
@@ -158,46 +156,43 @@ async function generateTOCWithGemini(
       const systemPrompt = createSystemPrompt();
       const userContext = JSON.stringify(formattedQA);
 
-      console.log(`Calling Gemini API (attempt ${retries + 1}/${MAX_RETRIES + 1})...`);
+      console.log(`Calling OpenAI API (attempt ${retries + 1}/${MAX_RETRIES + 1})...`);
       console.log(`Using ${formattedQA.length} QA pairs as context`);
 
-      const geminiResponse = await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+      const openAIResponse = await fetch(
+        "https://api.openai.com/v1/chat/completions",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-goog-api-key": GEMINI_API_KEY,
+            "Authorization": `Bearer ${OPENAI_API_KEY}`,
           },
           body: JSON.stringify({
-            contents: [
+            model: "gpt-4o",
+            messages: [
               {
-                role: "model",
-                parts: [{ text: systemPrompt }]
+                role: "system",
+                content: systemPrompt
               },
               {
                 role: "user",
-                parts: [{ text: userContext }]
+                content: userContext
               }
             ],
-            generationConfig: {
-              temperature: 0.2,
-              topK: 40,
-              topP: 0.95,
-              maxOutputTokens: 1024,
-            }
+            temperature: 0.2,
+            max_tokens: 1024,
           })
         }
       );
 
-      if (!geminiResponse.ok) {
-        const errorText = await geminiResponse.text();
-        console.error(`Gemini API error (${geminiResponse.status}): ${errorText}`);
+      if (!openAIResponse.ok) {
+        const errorText = await openAIResponse.text();
+        console.error(`OpenAI API error (${openAIResponse.status}): ${errorText}`);
         
         // If we're not at max retries, try again
         if (retries < MAX_RETRIES) {
           retries++;
-          lastError = new Error(`Gemini API returned status ${geminiResponse.status}: ${errorText}`);
+          lastError = new Error(`OpenAI API returned status ${openAIResponse.status}: ${errorText}`);
           // Exponential backoff
           const delay = Math.pow(2, retries) * 500;
           console.log(`Retrying in ${delay}ms...`);
@@ -205,14 +200,14 @@ async function generateTOCWithGemini(
           continue;
         }
         
-        throw new Error(`Gemini API returned status ${geminiResponse.status}: ${errorText}`);
+        throw new Error(`OpenAI API returned status ${openAIResponse.status}: ${errorText}`);
       }
 
-      const geminiData = await geminiResponse.json();
-      console.log("Successfully received response from Gemini API");
-      return parseTOCResponse(geminiData);
+      const openAIData = await openAIResponse.json();
+      console.log("Successfully received response from OpenAI API");
+      return parseTOCResponse(openAIData);
     } catch (error) {
-      console.error(`Error calling Gemini API (attempt ${retries + 1}/${MAX_RETRIES + 1}):`, error);
+      console.error(`Error calling OpenAI API (attempt ${retries + 1}/${MAX_RETRIES + 1}):`, error);
       
       // If we're not at max retries, try again
       if (retries < MAX_RETRIES) {
@@ -235,25 +230,24 @@ async function generateTOCWithGemini(
   throw lastError || new Error("Failed to generate TOC after retries");
 }
 
-// Parse the Gemini API response to extract the TOC
-function parseTOCResponse(geminiData: any): any[] {
+// Parse the OpenAI API response to extract the TOC
+function parseTOCResponse(openAIData: any): any[] {
   try {
-    if (!geminiData.candidates || 
-        !geminiData.candidates[0] || 
-        !geminiData.candidates[0].content || 
-        !geminiData.candidates[0].content.parts || 
-        !geminiData.candidates[0].content.parts[0]) {
-      console.error("Invalid response format from Gemini API:", JSON.stringify(geminiData, null, 2));
-      throw new Error("Invalid response format from Gemini API");
+    if (!openAIData.choices || 
+        !openAIData.choices[0] || 
+        !openAIData.choices[0].message || 
+        !openAIData.choices[0].message.content) {
+      console.error("Invalid response format from OpenAI API:", JSON.stringify(openAIData, null, 2));
+      throw new Error("Invalid response format from OpenAI API");
     }
 
-    const textContent = geminiData.candidates[0].content.parts[0].text;
+    const textContent = openAIData.choices[0].message.content.trim();
     if (!textContent) {
-      console.error("Empty text content from Gemini API");
-      throw new Error("Empty text content from Gemini API");
+      console.error("Empty text content from OpenAI API");
+      throw new Error("Empty text content from OpenAI API");
     }
 
-    console.log("Raw text response from Gemini:", textContent.substring(0, 100) + "...");
+    console.log("Raw text response from OpenAI:", textContent.substring(0, 100) + "...");
     
     // Extract just the JSON part
     const jsonMatch = textContent.match(/(\[[\s\S]*\])/);
@@ -263,8 +257,8 @@ function parseTOCResponse(geminiData: any): any[] {
         console.log(`Successfully parsed TOC with ${parsedData.length} chapters`);
         return parsedData;
       } catch (e) {
-        console.error("Failed to parse JSON match from Gemini response:", e);
-        throw new Error("Failed to parse JSON from Gemini response");
+        console.error("Failed to parse JSON match from OpenAI response:", e);
+        throw new Error("Failed to parse JSON from OpenAI response");
       }
     } else {
       // Try parsing the entire text as JSON
@@ -273,12 +267,12 @@ function parseTOCResponse(geminiData: any): any[] {
         console.log(`Successfully parsed TOC with ${parsedData.length} chapters`);
         return parsedData;
       } catch (e) {
-        console.error("Failed to parse JSON from Gemini response:", e);
-        throw new Error("Failed to parse JSON from Gemini response");
+        console.error("Failed to parse JSON from OpenAI response:", e);
+        throw new Error("Failed to parse JSON from OpenAI response");
       }
     }
   } catch (e) {
-    console.error("Error parsing Gemini response:", e);
+    console.error("Error parsing OpenAI response:", e);
     // Provide a fallback TOC if parsing fails
     console.log("Using fallback TOC due to parsing failure");
     return [
@@ -393,8 +387,8 @@ Deno.serve(async (req) => {
     console.log(`Starting TOC generation for biography: ${biographyId}`);
     
     // Check API key first
-    if (!GEMINI_API_KEY) {
-      const errorMessage = "Gemini API key is not configured";
+    if (!OPENAI_API_KEY) {
+      const errorMessage = "OpenAI API key is not configured";
       console.error(errorMessage);
       return new Response(JSON.stringify({ error: errorMessage, code: "MISSING_API_KEY" }), {
         status: 400,
@@ -445,17 +439,17 @@ Deno.serve(async (req) => {
       });
     }
     
-    // Generate TOC using Gemini API
+    // Generate TOC using OpenAI API
     let tocData;
     try {
-      console.log("Calling Gemini API to generate TOC");
-      tocData = await generateTOCWithGemini(formattedQA);
+      console.log("Calling OpenAI API to generate TOC");
+      tocData = await generateTOCWithOpenAI(formattedQA);
       console.log(`Successfully generated TOC with ${tocData.length} chapters`);
     } catch (error) {
-      console.error("Error generating TOC with Gemini:", error);
+      console.error("Error generating TOC with OpenAI:", error);
       return new Response(JSON.stringify({ 
         error: error.message,
-        code: "GEMINI_API_ERROR",
+        code: "OPENAI_API_ERROR",
         details: error instanceof Error ? error.stack : undefined
       }), {
         status: 500,

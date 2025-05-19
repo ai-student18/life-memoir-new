@@ -76,7 +76,7 @@ const BiographyQuestionnaire = () => {
     }
     
     if (!isKeyConfigured) {
-      const errorMsg = "מפתח ה-API של Gemini לא מוגדר במערכת. אנא פנה למנהל המערכת.";
+      const errorMsg = "מפתח ה-API של OpenAI לא מוגדר במערכת. אנא פנה למנהל המערכת.";
       setGenerationError(errorMsg);
       toast({
         title: "מפתח API חסר",
@@ -112,9 +112,9 @@ const BiographyQuestionnaire = () => {
         
         {!isKeyConfigured && !isChecking && (
           <Alert variant="destructive" className="mb-6">
-            <AlertTitle>אין מפתח API לשירות Gemini</AlertTitle>
+            <AlertTitle>אין מפתח API לשירות OpenAI</AlertTitle>
             <AlertDescription>
-              מפתח ה-API של Gemini אינו מוגדר במערכת. לא ניתן ליצור תוכן עניינים אוטומטי.
+              מפתח ה-API של OpenAI אינו מוגדר במערכת. לא ניתן ליצור תוכן עניינים אוטומטי.
               אנא פנה למנהל המערכת כדי להגדיר את המפתח.
             </AlertDescription>
           </Alert>

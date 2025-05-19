@@ -94,8 +94,8 @@ export const useTOCGenerate = () => {
         if (data.code === "NO_ANSWERS" || data.code === "EMPTY_ANSWERS") {
           throw new Error("לא נמצאו תשובות מספיקות ליצירת תוכן העניינים. אנא ענה על יותר שאלות.");
         } else if (data.code === "MISSING_API_KEY") {
-          throw new Error("מפתח ה-API של Gemini אינו מוגדר במערכת.");
-        } else if (data.code === "GEMINI_API_ERROR") {
+          throw new Error("מפתח ה-API של OpenAI אינו מוגדר במערכת.");
+        } else if (data.code === "OPENAI_API_ERROR") {
           throw new Error("שגיאה בשירות ה-AI. אנא נסה שוב מאוחר יותר.");
         } else {
           throw new Error(data.error);
