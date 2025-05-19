@@ -3,7 +3,6 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
-import { toast } from "sonner";
 import { showErrorToast, showSuccessToast } from '@/utils/errorHandling';
 
 type AuthContextType = {
@@ -67,7 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Set up session expiry check
     const checkInterval = setInterval(() => {
-      if (session && new Date(session.expires_at * 1000) < new Date()) {
+      if (session && session.expires_at && new Date(session.expires_at * 1000) < new Date()) {
         console.log("Session expired, attempting refresh");
         refreshSession();
       }

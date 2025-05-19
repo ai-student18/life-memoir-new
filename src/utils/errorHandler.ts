@@ -1,5 +1,6 @@
+
 import { toast } from "sonner";
-import { extractErrorMessage, ApiError, ValidationError, isApiError, isValidationError } from "./errorHandling";
+import { extractErrorMessage, ApiError, isApiError } from "./errorHandling";
 
 /**
  * Configuration options for error handling

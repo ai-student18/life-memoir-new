@@ -1,5 +1,4 @@
 
-import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { PlusCircle } from 'lucide-react';
@@ -50,15 +49,21 @@ const Dashboard = () => {
     enabled: !!user
   });
 
-  const handleCreateBiography = useCallback(async () => {
+  const handleCreateBiography = async () => {
     try {
+      if (!user?.id) {
+        toast.error("User authentication error. Please log in again.");
+        return;
+      }
+
       const title = `New Biography - ${format(new Date(), 'MMM d, yyyy')}`;
       
       const { data, error } = await supabase
         .from('biographies')
-        .insert([
-          { title, user_id: user?.id }
-        ])
+        .insert({
+          title, 
+          user_id: user.id
+        })
         .select()
         .single();
         
@@ -73,9 +78,9 @@ const Dashboard = () => {
       console.error('Error creating biography:', error);
       toast.error("Failed to create new biography");
     }
-  }, [user, navigate, refetch]);
+  };
 
-  const handleDeleteBiography = useCallback(async (id: string) => {
+  const handleDeleteBiography = async (id: string) => {
     try {
       const { error } = await supabase
         .from('biographies')
@@ -90,15 +95,15 @@ const Dashboard = () => {
       console.error('Error deleting biography:', error);
       toast.error("Failed to delete biography");
     }
-  }, [refetch]);
+  };
 
   // Handle retry logic for data fetching
-  const handleRetry = useCallback(() => {
+  const handleRetry = () => {
     refetch();
-  }, [refetch]);
+  };
 
   // Render biography cards or empty state
-  const renderBiographyContent = useCallback(() => {
+  const renderBiographyContent = () => {
     if (!biographies.length) {
       return <EmptyState onCreateBiography={handleCreateBiography} />;
     }
@@ -114,7 +119,7 @@ const Dashboard = () => {
         ))}
       </div>
     );
-  }, [biographies, handleCreateBiography, handleDeleteBiography]);
+  };
 
   return (
     <div className="min-h-screen bg-white">

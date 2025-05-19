@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Question, Answer } from "@/types/questionnaire";
 import { useNavigate } from "react-router-dom";
-import { biographyAnswerSchema, createFormSchema } from "@/utils/formValidation";
+import { biographyAnswerSchema } from "@/utils/formValidation";
 import { showErrorToast } from "@/utils/errorHandling";
 
 interface UseQuestionnaireFormProps {
