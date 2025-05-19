@@ -2,7 +2,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+// Note: Make sure the key in Supabase secrets uses the correct name format
+const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GEMINI-API-KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 
@@ -56,6 +57,13 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (!answers || answers.length === 0) {
+      return new Response(JSON.stringify({ error: "No answers found for this biography" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
     // Get the questions to associate with the answers
     const { data: questions, error: questionsError } = await supabase
       .from("biography_questions")
@@ -78,9 +86,17 @@ Deno.serve(async (req) => {
     const formattedQA = answers.map(answer => ({
       question: questionsMap[answer.question_id],
       answer: answer.answer_text || ""
-    }));
+    })).filter(qa => qa.answer.trim() !== ""); // Filter out empty answers
 
-    console.log("Found", formattedQA.length, "question-answer pairs");
+    console.log("Found", formattedQA.length, "question-answer pairs with content");
+    
+    // Check if we have any non-empty answers
+    if (formattedQA.length === 0) {
+      return new Response(JSON.stringify({ error: "No non-empty answers found for this biography" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
     
     // Call Gemini API to generate TOC
     if (!GEMINI_API_KEY) {
@@ -92,6 +108,21 @@ Deno.serve(async (req) => {
 
     console.log("Calling Gemini API to generate TOC");
     
+    // Create a system prompt specifically for TOC generation
+    const systemPrompt = `You are a professional biographer specializing in creating structured table of contents. 
+    Create a clear, organized table of contents for a biography based on the provided Q&A session.
+    Return ONLY a JSON array of chapters, with each chapter having a 'title' and 'description' field.
+    Follow these guidelines:
+    - Create 5-10 chapters that flow chronologically or thematically
+    - Make chapter titles descriptive and engaging
+    - Include brief descriptions that summarize what each chapter will cover
+    - Ensure chapters collectively tell a cohesive life story
+    - Structure must be valid JSON with no additional text or explanations
+    - Format as: [{"title": "Chapter Title", "description": "Brief description"}]`;
+    
+    // Prepare user context from Q&A pairs
+    const userContext = JSON.stringify(formattedQA);
+    
     const geminiResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent", {
       method: "POST",
       headers: {
@@ -101,24 +132,12 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         contents: [
           {
-            parts: [
-              {
-                text: `Create a structured table of contents for a biography based on these answers to questions. 
-                Return ONLY a JSON array of chapters, with each chapter having a 'title' and 'description' field. 
-                Each chapter should cover a period or theme from the person's life based on these answers:
-                ${JSON.stringify(formattedQA)}
-                
-                Format your response as a valid JSON array like this:
-                [
-                  {
-                    "title": "Chapter title",
-                    "description": "Brief description of what this chapter will cover"
-                  },
-                  ...
-                ]
-                Only return the JSON, nothing else.`
-              }
-            ]
+            role: "model",
+            parts: [{ text: systemPrompt }]
+          },
+          {
+            role: "user",
+            parts: [{ text: userContext }]
           }
         ],
         generationConfig: {
@@ -129,6 +148,18 @@ Deno.serve(async (req) => {
         }
       })
     });
+
+    if (!geminiResponse.ok) {
+      const errorData = await geminiResponse.json();
+      console.error("Gemini API error:", errorData);
+      return new Response(JSON.stringify({ 
+        error: "Error from Gemini API", 
+        details: errorData 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
 
     const geminiData = await geminiResponse.json();
     console.log("Received response from Gemini API");

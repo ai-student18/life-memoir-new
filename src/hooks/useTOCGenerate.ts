@@ -24,7 +24,14 @@ export const useTOCGenerate = () => {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("לא נמצא מידע על המשתמש");
+      if (!session) {
+        toast({
+          title: "שגיאה",
+          description: "לא נמצא מידע על המשתמש, נדרשת התחברות",
+          variant: "destructive"
+        });
+        return;
+      }
 
       // Check if there are any answers for this biography
       const { data: answers, error: answersError } = await supabase
@@ -33,7 +40,10 @@ export const useTOCGenerate = () => {
         .eq("biography_id", biographyId)
         .limit(1);
         
-      if (answersError) throw answersError;
+      if (answersError) {
+        console.error("Error checking for answers:", answersError);
+        throw answersError;
+      }
       
       if (!answers || answers.length === 0) {
         toast({
@@ -45,11 +55,24 @@ export const useTOCGenerate = () => {
       }
 
       // Generate the TOC using the edge function
-      const { error } = await supabase.functions.invoke("generate-toc", {
+      const { data, error } = await supabase.functions.invoke("generate-toc", {
         body: { biographyId }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Edge function error:", error);
+        throw error;
+      }
+
+      if (data?.error) {
+        console.error("TOC generation error:", data.error);
+        toast({
+          title: "שגיאה",
+          description: data.error || "נכשל ביצירת תוכן העניינים",
+          variant: "destructive"
+        });
+        return;
+      }
 
       toast({
         title: "הצלחה",
@@ -63,7 +86,7 @@ export const useTOCGenerate = () => {
       console.error("Error generating TOC:", error);
       toast({
         title: "שגיאה",
-        description: "נכשל ביצירת תוכן העניינים",
+        description: error instanceof Error ? error.message : "נכשל ביצירת תוכן העניינים",
         variant: "destructive"
       });
     } finally {
