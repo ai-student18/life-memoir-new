@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { showErrorToast, showSuccessToast } from "@/utils/errorHandling";
+import { toast } from "@/hooks/use-toast";
 
 /**
  * Custom hook to handle biography completion logic
@@ -19,7 +19,11 @@ export const useCompleteBiography = () => {
    */
   const completeBiography = async (biographyId: string, generateToc: boolean = true): Promise<void> => {
     if (!biographyId) {
-      showErrorToast("מזהה ביוגרפיה חסר");
+      toast({
+        title: "Error",
+        description: "Biography ID is required",
+        variant: "destructive"
+      });
       return;
     }
     
@@ -40,7 +44,10 @@ export const useCompleteBiography = () => {
       }
       
       // Show success message
-      showSuccessToast("השאלון הושלם בהצלחה!");
+      toast({
+        title: "Success",
+        description: "Questionnaire completed successfully!",
+      });
       
       // Generate TOC or navigate to dashboard
       if (generateToc) {
@@ -55,7 +62,11 @@ export const useCompleteBiography = () => {
           navigate(`/biography/${biographyId}/toc`);
         } catch (error) {
           console.error("Error generating TOC:", error);
-          showErrorToast("שגיאה ביצירת תוכן העניינים, תוכל לנסות שוב מלוח הבקרה");
+          toast({
+            title: "Error",
+            description: "Failed to generate table of contents, you can try again from the dashboard",
+            variant: "destructive"
+          });
           navigate(`/dashboard`);
         }
       } else {
@@ -65,7 +76,11 @@ export const useCompleteBiography = () => {
       
     } catch (error) {
       console.error("Error updating biography status:", error);
-      showErrorToast(error, "שגיאה בעדכון סטטוס הביוגרפיה");
+      toast({
+        title: "Error",
+        description: "Failed to update biography status",
+        variant: "destructive"
+      });
     } finally {
       setIsCompleting(false);
     }

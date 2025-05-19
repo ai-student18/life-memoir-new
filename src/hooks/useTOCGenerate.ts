@@ -28,6 +28,26 @@ export const useTOCGenerate = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("No session found");
 
+      // Check if there are any answers for this biography
+      const { data: answers, error: answersError } = await supabase
+        .from("biography_answers")
+        .select("id")
+        .eq("biography_id", biographyId)
+        .limit(1);
+        
+      if (answersError) throw answersError;
+      
+      if (!answers || answers.length === 0) {
+        toast({
+          title: "Error",
+          description: "No answers found for this biography. Please complete the questionnaire first.",
+          variant: "destructive"
+        });
+        setIsGenerating(false);
+        return;
+      }
+
+      // Generate the TOC using the edge function
       const { error } = await supabase.functions.invoke("generate-toc", {
         body: { biographyId }
       });
@@ -39,8 +59,8 @@ export const useTOCGenerate = () => {
         description: "Table of contents generated successfully",
       });
 
-      // Navigate to the TOC page
-      navigate(`/biography/${biographyId}/toc`);
+      // Force reload the page to get the latest TOC data
+      window.location.reload();
 
     } catch (error) {
       console.error("Error generating TOC:", error);

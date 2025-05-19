@@ -7,10 +7,11 @@ import { useBiography } from "@/hooks/useBiography";
 import { useTOCGenerate } from "@/hooks/useTOCGenerate";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
+import { ErrorDisplay } from "@/components/ui/error-display";
 
 const BiographyTOC = () => {
   const { biographyId } = useParams<{ biographyId: string }>();
-  const { data: biography, isLoading: biographyLoading } = useBiography(biographyId);
+  const { data: biography, isLoading: biographyLoading, error: biographyError } = useBiography(biographyId);
   const { generateTOC, isGenerating } = useTOCGenerate();
 
   const handleRegenerateTOC = async () => {
@@ -21,6 +22,19 @@ const BiographyTOC = () => {
 
   if (biographyLoading) {
     return <TOCLoading />;
+  }
+  
+  if (biographyError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white p-4">
+        <ErrorDisplay 
+          title="Failed to load biography" 
+          message="Unable to load biography details. Please try again." 
+          onRetry={() => window.location.reload()}
+          variant="full"
+        />
+      </div>
+    );
   }
 
   return (
