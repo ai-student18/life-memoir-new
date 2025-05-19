@@ -27,7 +27,7 @@ const BiographyQuestionnaire = () => {
   const { data: questions, isLoading: questionsLoading } = useQuestions();
   const { answers, answeredCount, isLoading: answersLoading, saveAnswer } = useQuestionnaireAnswers(biographyId);
   const { completeBiography } = useCompleteBiography();
-  const { generateTOC, isGenerating } = useTOCGenerate();
+  const { generateTOC } = useTOCGenerate();
   const { isKeyConfigured, isChecking } = useGeminiApiKey();
 
   // Check if data is still loading
