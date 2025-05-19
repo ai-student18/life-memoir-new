@@ -19,7 +19,8 @@ const NavBar = () => {
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
+      // Removed setIsScrolled since we're not using isScrolled anymore
+      // This keeps the scroll listener for future use if needed
     };
 
     window.addEventListener('scroll', handleScroll);
