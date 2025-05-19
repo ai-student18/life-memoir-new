@@ -28,7 +28,7 @@ export interface Biography {
   id: string;
   title: string;
   status: string;
-  progress?: string;
+  progress?: string | null;
   created_at: string;
   updated_at: string;
 }

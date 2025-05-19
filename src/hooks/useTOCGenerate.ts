@@ -28,7 +28,7 @@ export const useTOCGenerate = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("No session found");
 
-      const { data, error } = await supabase.functions.invoke("generate-toc", {
+      const { error } = await supabase.functions.invoke("generate-toc", {
         body: { biographyId }
       });
 

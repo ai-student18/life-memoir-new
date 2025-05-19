@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { Json } from "@/integrations/supabase/types";
 
 export interface TOCChapter {
   title: string;
@@ -41,7 +42,12 @@ export const useTOC = (biographyId: string | undefined) => {
         .single();
 
       if (error) throw error;
-      return data as TOCData;
+      
+      // Convert Json structure to TOCChapter[]
+      return {
+        ...data,
+        structure: (data.structure as unknown as TOCChapter[]) || []
+      } as TOCData;
     },
     enabled: !!biographyId,
     retry: 1,
@@ -62,7 +68,7 @@ export const useTOC = (biographyId: string | undefined) => {
       if (structure !== undefined) updates.structure = structure;
       if (approved !== undefined) updates.approved = approved;
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("biography_toc")
         .update(updates)
         .eq("biography_id", biographyId)
@@ -82,9 +88,9 @@ export const useTOC = (biographyId: string | undefined) => {
           .eq("id", biographyId);
       }
 
-      return data;
+      return { success: true };
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["biography_toc", biographyId] });
       queryClient.invalidateQueries({ queryKey: ["biographies"] });
       toast({

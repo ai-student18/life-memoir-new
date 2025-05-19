@@ -4,9 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useTOC, TOCChapter } from "@/hooks/useTOC";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Save, ArrowRight, GripVertical, Trash } from "lucide-react";
+import { PlusCircle, Save, ArrowRight } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
   DndContext,
@@ -15,21 +13,19 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  DragEndEvent
 } from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import TOCChapterCard from "./TOCChapterCard";
 
 const TOCEditor = () => {
   const { biographyId } = useParams<{ biographyId: string }>();
   const navigate = useNavigate();
-  const { tocData, isLoading, error, updateTOC, chapters } = useTOC(biographyId);
+  const { isLoading, error, updateTOC, chapters } = useTOC(biographyId);
   const [localChapters, setLocalChapters] = useState<TOCChapter[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -107,13 +103,13 @@ const TOCEditor = () => {
     })
   );
 
-  const handleDragEnd = (event) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     
-    if (active.id !== over.id) {
+    if (active.id !== over?.id) {
       setLocalChapters((items) => {
         const oldIndex = items.findIndex((_, i) => `chapter-${i}` === active.id);
-        const newIndex = items.findIndex((_, i) => `chapter-${i}` === over.id);
+        const newIndex = items.findIndex((_, i) => `chapter-${i}` === over?.id);
         
         return arrayMove(items, oldIndex, newIndex);
       });
