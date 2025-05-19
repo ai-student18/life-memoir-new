@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 // Mock data for testimonials
@@ -38,7 +38,6 @@ const testimonials = [
 
 const TestimonialsSection = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [scrollPosition, setScrollPosition] = useState(0);
   
   const scroll = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
@@ -50,8 +49,6 @@ const TestimonialsSection = () => {
         left: scrollAmount,
         behavior: 'smooth'
       });
-      
-      setScrollPosition(container.scrollLeft + scrollAmount);
     }
   };
 

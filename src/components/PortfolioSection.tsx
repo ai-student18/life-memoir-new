@@ -1,6 +1,4 @@
 
-import React from 'react';
-
 // Mock data for portfolio items
 const portfolioItems = [
   {

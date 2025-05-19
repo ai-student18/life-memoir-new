@@ -1,6 +1,7 @@
-import React from 'react';
+
 import { Button } from "@/components/ui/button";
 import { Pencil, Book } from 'lucide-react';
+
 const HeroSection = () => {
   return <section id="hero" className="relative h-[60vh] min-h-[500px] flex items-center justify-center overflow-hidden pt-[72px]">
       {/* Background Image */}
@@ -40,4 +41,5 @@ const HeroSection = () => {
       </div>
     </section>;
 };
+
 export default HeroSection;

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { safeAsync } from "@/utils/errorHandler";
@@ -6,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, Mail, Lock } from "lucide-react";
+import { Mail, Lock } from "lucide-react";
 
 interface AuthFormData {
   email: string;
@@ -72,7 +73,7 @@ const Auth = () => {
     const { email, password } = formData;
     const authPromise = isLogin ? signIn(email, password) : signUp(email, password);
 
-    const [result, error] = await safeAsync(authPromise, {
+    const [_, error] = await safeAsync(authPromise, {
       errorMessage: isLogin ? "Login failed" : "Sign up failed",
       retryCount: 1,
       retryDelay: 1000,
