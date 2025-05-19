@@ -164,8 +164,8 @@ async function generateTOCWithOpenAI(formattedQA: QuestionAnswer[]): Promise<any
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
             "Authorization": `Bearer ${OPENAI_API_KEY}`,
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             model: "gpt-4o",
