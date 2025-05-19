@@ -1,25 +1,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-
-/**
- * Interface representing a biography
- */
-export interface BiographyData {
-  id: string;
-  title: string;
-  status: string;
-  created_at: string;
-  updated_at: string;
-  user_id: string;
-}
+import { Biography } from "@/types/biography";
 
 /**
  * Custom hook to fetch a single biography by ID
  * @param biographyId The ID of the biography to fetch
  */
 export const useBiography = (biographyId: string | undefined) => {
-  return useQuery<BiographyData, Error>({
+  return useQuery<Biography, Error>({
     queryKey: ["biography", biographyId],
     queryFn: async () => {
       if (!biographyId) throw new Error("No biography ID provided");
@@ -31,7 +20,7 @@ export const useBiography = (biographyId: string | undefined) => {
         .single();
 
       if (error) throw error;
-      return data as BiographyData;
+      return data as Biography;
     },
     enabled: !!biographyId,
     retry: 1,

@@ -1,4 +1,5 @@
-import { Chapter } from "@/hooks/useChapters";
+
+import { Chapter } from "@/types/biography";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

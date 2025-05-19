@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
 import { useBiography } from "@/hooks/useBiography";
 import { useChapters } from "@/hooks/useChapters";
@@ -7,11 +8,20 @@ import { Card, CardContent } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import ChapterEditor from "@/components/editor/ChapterEditor";
 import ChapterSelector from "@/components/editor/ChapterSelector";
+import { ErrorDisplay } from "@/components/ui/error-display";
 
 const BiographyEditor = () => {
   const { biographyId } = useParams<{ biographyId: string }>();
-  const { data: biography, isLoading: biographyLoading } = useBiography(biographyId);
-  const { chapters, isLoading: chaptersLoading, saveChapter } = useChapters(biographyId);
+  const navigate = useNavigate();
+  const { data: biography, isLoading: biographyLoading, error: biographyError } = useBiography(biographyId);
+  const { 
+    chapters, 
+    isLoading: chaptersLoading, 
+    error: chaptersError,
+    saveChapter,
+    refetch: refetchChapters
+  } = useChapters(biographyId);
+  
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -22,8 +32,11 @@ const BiographyEditor = () => {
   }, [chapters, activeChapterId]);
 
   const activeChapter = chapters?.find(chapter => chapter.id === activeChapterId);
+  
+  const isLoading = biographyLoading || chaptersLoading;
+  const error = biographyError || chaptersError;
 
-  if (biographyLoading || chaptersLoading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-white">
         <NavBar />
@@ -34,17 +47,37 @@ const BiographyEditor = () => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-white">
+        <NavBar />
+        <div className="container mx-auto px-4 py-8 pt-24">
+          <ErrorDisplay 
+            title="Error Loading Biography" 
+            message={error.message}
+            onRetry={() => {
+              if (biographyError) {
+                window.location.reload();
+              } else if (chaptersError) {
+                refetchChapters();
+              }
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (!biography) {
     return (
       <div className="min-h-screen bg-white">
         <NavBar />
         <div className="container mx-auto px-4 py-8 pt-24">
-          <Card className="p-8 text-center">
-            <CardContent>
-              <h2 className="text-2xl font-bold text-red-500">Biography not found</h2>
-              <p className="mt-2 text-gray-600">The biography you're looking for doesn't exist or you don't have access to it.</p>
-            </CardContent>
-          </Card>
+          <ErrorDisplay
+            title="Biography not found"
+            message="The biography you're looking for doesn't exist or you don't have access to it."
+            onRetry={() => navigate("/dashboard")}
+          />
         </div>
       </div>
     );
@@ -77,7 +110,9 @@ const BiographyEditor = () => {
               />
             ) : (
               <Card className="p-6 text-center">
-                <p className="text-gray-500">Select a chapter to start writing</p>
+                <CardContent>
+                  <p className="text-gray-500">Select a chapter to start writing</p>
+                </CardContent>
               </Card>
             )}
           </div>
