@@ -2,7 +2,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Chapter } from "@/types/biography";
-import { extractErrorMessage } from "@/utils/errorHandling";
 
 /**
  * Hook to fetch chapters for a biography
