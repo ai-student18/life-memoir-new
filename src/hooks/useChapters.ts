@@ -102,11 +102,18 @@ export const useChapters = (biographyId: string | undefined) => {
   // Create a new chapter
   const createChapterMutation = useMutation({
     mutationFn: async (chapterData: Omit<Chapter, "id" | "created_at" | "updated_at">): Promise<Chapter> => {
+      // Make sure biographyId exists and is a string before using it
+      if (!biographyId) {
+        throw new Error("Biography ID is required");
+      }
+      
       const { data, error } = await supabase
         .from("biography_chapters")
         .insert({
-          ...chapterData,
           biography_id: biographyId,
+          title: chapterData.title,
+          content: chapterData.content,
+          chapter_order: chapterData.chapter_order,
         })
         .select("*")
         .single();
