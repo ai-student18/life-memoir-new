@@ -1,7 +1,5 @@
-
 import { Button } from "@/components/ui/button";
 import { Pencil, Book } from 'lucide-react';
-
 const HeroSection = () => {
   return <section id="hero" className="relative h-[60vh] min-h-[500px] flex items-center justify-center overflow-hidden pt-[72px]">
       {/* Background Image */}
@@ -33,7 +31,7 @@ const HeroSection = () => {
           </Button>
           
           {/* Secondary button - Improved visibility with dark blue background */}
-          <Button variant="outline" className="secondary-button bg-opacity-80 border-white text-lg px-6 py-6 hover:bg-opacity-90 bg-sky-600 hover:bg-sky-500 text-black/[0.31]">
+          <Button variant="outline" className="secondary-button bg-opacity-80 border-white px-6 py-6 hover:bg-opacity-90 bg-slate-50 text-slate-900 text-center text-lg">
             <Book className="mr-2 h-5 w-5" />
             Learn More
           </Button>
@@ -41,5 +39,4 @@ const HeroSection = () => {
       </div>
     </section>;
 };
-
 export default HeroSection;
