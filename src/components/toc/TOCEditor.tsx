@@ -13,7 +13,8 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent
+  DragEndEvent,
+  sortableKeyboardCoordinates
 } from "@dnd-kit/core";
 import {
   arrayMove,

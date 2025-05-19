@@ -70,8 +70,10 @@ export const BiographyCard = ({ biography, onDelete }: BiographyCardProps) => {
     }
   };
 
-  const getProgressText = (progress?: string) => {
-    switch (progress?.toLowerCase()) {
+  const getProgressText = (progress?: string | null) => {
+    if (!progress) return 'Continue';
+    
+    switch (progress.toLowerCase()) {
       case 'questionnaire':
         return 'Answer questions';
       case 'toc':
@@ -85,8 +87,10 @@ export const BiographyCard = ({ biography, onDelete }: BiographyCardProps) => {
     }
   };
 
-  const getProgressIcon = (progress?: string) => {
-    switch (progress?.toLowerCase()) {
+  const getProgressIcon = (progress?: string | null) => {
+    if (!progress) return <FileQuestion className="mr-2 h-4 w-4" />;
+    
+    switch (progress.toLowerCase()) {
       case 'questionnaire':
         return <FileQuestion className="mr-2 h-4 w-4" />;
       case 'toc':
@@ -99,8 +103,10 @@ export const BiographyCard = ({ biography, onDelete }: BiographyCardProps) => {
     }
   };
 
-  const getProgressPath = (biographyId: string, progress?: string) => {
-    switch (progress?.toLowerCase()) {
+  const getProgressPath = (biographyId: string, progress?: string | null) => {
+    if (!progress) return `/biography/${biographyId}/questionnaire`;
+    
+    switch (progress.toLowerCase()) {
       case 'questionnaire':
         return `/biography/${biographyId}/questionnaire`;
       case 'toc':
