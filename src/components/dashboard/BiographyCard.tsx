@@ -50,7 +50,12 @@ export const BiographyCard = ({ biography, onDelete }: BiographyCardProps) => {
         return 'bg-yellow-200 text-yellow-800';
       case 'questionnairecompleted':
         return 'bg-blue-200 text-blue-800';
-      case 'published':
+      case 'tocgenerated':
+      case 'tocapproved': 
+        return 'bg-violet-200 text-violet-800';
+      case 'inprogress':
+        return 'bg-amber-200 text-amber-800';
+      case 'completed':
         return 'bg-green-200 text-green-800';
       default:
         return 'bg-gray-200 text-gray-800';
@@ -62,9 +67,15 @@ export const BiographyCard = ({ biography, onDelete }: BiographyCardProps) => {
       case 'draft':
         return 'Draft';
       case 'questionnairecompleted':
+        return 'Questions Completed';
+      case 'tocgenerated':
+        return 'TOC Generated';
+      case 'tocapproved':
+        return 'TOC Approved';
+      case 'inprogress':
+        return 'In Progress';
+      case 'completed':
         return 'Completed';
-      case 'published':
-        return 'Published';
       default:
         return status;
     }
@@ -78,6 +89,7 @@ export const BiographyCard = ({ biography, onDelete }: BiographyCardProps) => {
         return 'Answer questions';
       case 'toc':
         return 'Edit table of contents';
+      case 'editor':
       case 'chapters':
         return 'Edit chapters';
       case 'complete':
@@ -95,7 +107,9 @@ export const BiographyCard = ({ biography, onDelete }: BiographyCardProps) => {
         return <FileQuestion className="mr-2 h-4 w-4" />;
       case 'toc':
         return <BookOpen className="mr-2 h-4 w-4" />;
+      case 'editor':
       case 'chapters':
+        return <FileEdit className="mr-2 h-4 w-4" />;
       case 'complete':
         return <FileEdit className="mr-2 h-4 w-4" />;
       default:
@@ -111,7 +125,9 @@ export const BiographyCard = ({ biography, onDelete }: BiographyCardProps) => {
         return `/biography/${biographyId}/questionnaire`;
       case 'toc':
         return `/biography/${biographyId}/toc`;
+      case 'editor':
       case 'chapters':
+        return `/biography/${biographyId}/editor`;
       case 'complete':
         return `/biography/${biographyId}/editor`;
       default:

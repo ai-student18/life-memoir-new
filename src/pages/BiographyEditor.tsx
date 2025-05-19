@@ -9,11 +9,15 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import ChapterEditor from "@/components/editor/ChapterEditor";
 import ChapterSelector from "@/components/editor/ChapterSelector";
 import { ErrorDisplay } from "@/components/ui/error-display";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { BiographyStatus } from "@/types/biography";
+import { toast } from "@/hooks/use-toast";
 
 const BiographyEditor = () => {
   const { biographyId } = useParams<{ biographyId: string }>();
   const navigate = useNavigate();
-  const { data: biography, isLoading: biographyLoading, error: biographyError } = useBiography(biographyId);
+  const { data: biography, isLoading: biographyLoading, error: biographyError, refetch: refetchBiography } = useBiography(biographyId);
   const { 
     chapters, 
     isLoading: chaptersLoading, 
@@ -23,6 +27,36 @@ const BiographyEditor = () => {
   } = useChapters(biographyId);
   
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Set the biography status to InProgress when editor is opened
+  useEffect(() => {
+    const updateBiographyStatus = async () => {
+      if (biographyId && biography && biography.status !== BiographyStatus.InProgress) {
+        setIsSaving(true);
+        try {
+          await supabase
+            .from("biographies")
+            .update({
+              status: BiographyStatus.InProgress,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", biographyId);
+          
+          // Refetch biography to get updated status
+          refetchBiography();
+        } catch (error) {
+          console.error("Error updating biography status:", error);
+        } finally {
+          setIsSaving(false);
+        }
+      }
+    };
+
+    if (biography) {
+      updateBiographyStatus();
+    }
+  }, [biography, biographyId, refetchBiography]);
 
   useEffect(() => {
     // Set the first chapter as active by default when chapters are loaded
@@ -35,6 +69,31 @@ const BiographyEditor = () => {
   
   const isLoading = biographyLoading || chaptersLoading;
   const error = biographyError || chaptersError;
+
+  const handleSaveAndExit = async () => {
+    setIsSaving(true);
+    try {
+      if (biographyId) {
+        if (activeChapter) {
+          await saveChapter(activeChapter);
+        }
+        toast({
+          title: "Success",
+          description: "Progress saved successfully",
+        });
+        navigate("/dashboard");
+      }
+    } catch (error) {
+      console.error("Error saving progress:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save progress",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -88,9 +147,18 @@ const BiographyEditor = () => {
       <NavBar />
       
       <div className="container mx-auto px-4 py-8 pt-24">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">{biography.title}</h1>
-          <p className="text-gray-600">Write your biography chapter by chapter</p>
+        <div className="mb-6 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">{biography.title}</h1>
+            <p className="text-gray-600">Write your biography chapter by chapter</p>
+          </div>
+          <Button 
+            onClick={handleSaveAndExit}
+            disabled={isSaving}
+            className="bg-[#5B9AA0] hover:bg-[#4a8a90] text-white"
+          >
+            {isSaving ? "Saving..." : "Save & Back to Dashboard"}
+          </Button>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

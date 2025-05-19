@@ -83,11 +83,12 @@ export const useTOC = (biographyId: string | undefined) => {
       if (error) throw error;
 
       if (approved) {
-        // Update biography progress if approving TOC
+        // Update biography progress if approving TOC - change from 'chapters' to 'editor'
         await supabase
           .from("biographies")
           .update({
-            progress: "chapters",
+            progress: "editor",
+            status: "TOCApproved",
             updated_at: new Date().toISOString(),
           })
           .eq("id", biographyId);

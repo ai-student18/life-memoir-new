@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { PlusCircle, Save, ArrowRight } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { BiographyStatus } from "@/types/biography";
 import {
   DndContext,
   closestCenter,
@@ -125,6 +126,16 @@ const TOCEditor = () => {
               });
             }
           }
+          
+          // Update biography status to TOCApproved
+          await supabase
+            .from("biographies")
+            .update({
+              status: BiographyStatus.TOCApproved,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", biographyId);
+          
         } catch (error) {
           console.error("Error managing chapters:", error);
         }
