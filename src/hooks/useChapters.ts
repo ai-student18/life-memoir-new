@@ -1,7 +1,6 @@
 
 import { useChapterQueries } from "./chapters/useChapterQueries";
 import { useChapterActions } from "./chapters/useChapterActions";
-import { Chapter } from "@/types/biography";
 
 /**
  * Main hook for chapter management that combines queries and actions

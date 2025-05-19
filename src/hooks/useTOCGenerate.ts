@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
 
 /**
  * Custom hook to generate TOC for a biography
@@ -10,7 +9,6 @@ import { useNavigate } from "react-router-dom";
  */
 export const useTOCGenerate = () => {
   const [isGenerating, setIsGenerating] = useState(false);
-  const navigate = useNavigate();
 
   const generateTOC = async (biographyId: string): Promise<void> => {
     if (!biographyId) {
