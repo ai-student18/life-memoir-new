@@ -1,5 +1,3 @@
-
-import { TOCData } from "@/hooks/useTOC";
 import { Chapter } from "@/hooks/useChapters";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

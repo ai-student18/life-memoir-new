@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import NavBar from "@/components/NavBar";
 import { useBiography } from "@/hooks/useBiography";
-import { useTOC } from "@/hooks/useTOC";
 import { useChapters } from "@/hooks/useChapters";
 import { Card, CardContent } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -12,7 +11,6 @@ import ChapterSelector from "@/components/editor/ChapterSelector";
 const BiographyEditor = () => {
   const { biographyId } = useParams<{ biographyId: string }>();
   const { data: biography, isLoading: biographyLoading } = useBiography(biographyId);
-  const { tocData, isLoading: tocLoading } = useTOC(biographyId);
   const { chapters, isLoading: chaptersLoading, saveChapter } = useChapters(biographyId);
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
 
@@ -25,7 +23,7 @@ const BiographyEditor = () => {
 
   const activeChapter = chapters?.find(chapter => chapter.id === activeChapterId);
 
-  if (biographyLoading || tocLoading || chaptersLoading) {
+  if (biographyLoading || chaptersLoading) {
     return (
       <div className="min-h-screen bg-white">
         <NavBar />
