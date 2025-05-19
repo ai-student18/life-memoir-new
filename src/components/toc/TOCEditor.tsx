@@ -13,13 +13,13 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
-  sortableKeyboardCoordinates
+  DragEndEvent
 } from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   verticalListSortingStrategy,
+  sortableKeyboardCoordinates
 } from "@dnd-kit/sortable";
 import TOCChapterCard from "./TOCChapterCard";
 
