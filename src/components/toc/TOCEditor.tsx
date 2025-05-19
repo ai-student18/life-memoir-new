@@ -1,6 +1,5 @@
 
-import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useTOC } from "@/hooks/useTOC";
 import TOCHeader from "./TOCHeader";
 import ChaptersList from "./ChaptersList";

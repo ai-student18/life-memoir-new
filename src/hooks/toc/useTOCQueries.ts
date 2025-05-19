@@ -1,7 +1,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { TOCData, TOCChapter } from "@/types/biography";
+import { TOCData } from "@/types/biography";
 
 /**
  * Hook to fetch TOC data for a biography

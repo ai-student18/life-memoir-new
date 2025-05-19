@@ -38,17 +38,5 @@ export const useTOC = (biographyId: string | undefined) => {
   };
 };
 
-// Re-export the TOC types for backward compatibility
-export interface TOCChapter {
-  title: string;
-  description: string;
-}
-
-export interface TOCData {
-  id: string;
-  biography_id: string;
-  structure: TOCChapter[];
-  approved: boolean;
-  created_at: string;
-  updated_at: string;
-}
+// Re-export the types for backward compatibility
+export type { TOCChapter, TOCData };
