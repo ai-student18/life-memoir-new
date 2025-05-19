@@ -1,9 +1,44 @@
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
-// Json type is used implicitly through TOCData's structure field
+import { useTOCQueries } from "./toc/useTOCQueries";
+import { useTOCActions } from "./toc/useTOCActions";
+import { TOCChapter, TOCData } from "@/types/biography";
 
+/**
+ * Main hook that combines TOC queries and actions
+ */
+export const useTOC = (biographyId: string | undefined) => {
+  const { tocData, isLoading, error, chapters } = useTOCQueries(biographyId);
+  const { isSaving, saveTOC, approveAndContinue } = useTOCActions(biographyId);
+
+  // Update and retain the same interface as before for backward compatibility
+  const updateTOC = {
+    mutateAsync: async ({
+      structure,
+      approved,
+    }: {
+      structure?: TOCChapter[];
+      approved?: boolean;
+    }) => {
+      if (approved && structure) {
+        return approveAndContinue(structure);
+      } else if (structure) {
+        return saveTOC(structure);
+      }
+      return Promise.resolve();
+    }
+  };
+
+  return {
+    tocData,
+    isLoading,
+    error,
+    updateTOC,
+    isSaving,
+    chapters,
+  };
+};
+
+// Re-export the TOC types for backward compatibility
 export interface TOCChapter {
   title: string;
   description: string;
@@ -17,108 +52,3 @@ export interface TOCData {
   created_at: string;
   updated_at: string;
 }
-
-/**
- * Custom hook to fetch and manage TOC data
- * @param biographyId The biography ID
- */
-export const useTOC = (biographyId: string | undefined) => {
-  const queryClient = useQueryClient();
-
-  // Fetch TOC data
-  const {
-    data: tocData,
-    isLoading,
-    error,
-  } = useQuery<TOCData, Error>({
-    queryKey: ["biography_toc", biographyId],
-    queryFn: async () => {
-      if (!biographyId) throw new Error("Biography ID is required");
-
-      const { data, error } = await supabase
-        .from("biography_toc")
-        .select("*")
-        .eq("biography_id", biographyId)
-        .single();
-
-      if (error) throw error;
-      
-      // Convert structure to TOCChapter[] with proper type casting
-      return {
-        ...data,
-        structure: Array.isArray(data.structure) 
-          ? (data.structure as any[]).map(item => ({
-              title: item.title || '',
-              description: item.description || ''
-            }))
-          : []
-      } as TOCData;
-    },
-    enabled: !!biographyId,
-    retry: 1,
-  });
-
-  // Update TOC structure and approval status
-  const updateTOC = useMutation({
-    mutationFn: async ({
-      structure,
-      approved,
-    }: {
-      structure?: TOCChapter[];
-      approved?: boolean;
-    }) => {
-      if (!biographyId) throw new Error("Biography ID is required");
-
-      const updates: any = { updated_at: new Date().toISOString() };
-      if (structure !== undefined) updates.structure = structure;
-      if (approved !== undefined) updates.approved = approved;
-
-      const { error } = await supabase
-        .from("biography_toc")
-        .update(updates)
-        .eq("biography_id", biographyId)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      if (approved) {
-        // Update biography progress if approving TOC - change from 'chapters' to 'editor'
-        await supabase
-          .from("biographies")
-          .update({
-            progress: "editor",
-            status: "TOCApproved",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", biographyId);
-      }
-
-      return { success: true };
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["biography_toc", biographyId] });
-      queryClient.invalidateQueries({ queryKey: ["biographies"] });
-      toast({
-        title: "Success",
-        description: "Table of contents updated successfully",
-      });
-    },
-    onError: (error) => {
-      console.error("Error updating TOC:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update table of contents",
-        variant: "destructive",
-      });
-    },
-  });
-
-  return {
-    tocData,
-    isLoading,
-    error,
-    updateTOC,
-    chapters: tocData?.structure || [],
-  };
-};
