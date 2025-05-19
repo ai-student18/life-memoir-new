@@ -15,8 +15,9 @@ export const useCompleteBiography = () => {
   /**
    * Updates the biography status to indicate questionnaire completion
    * @param biographyId The ID of the biography to complete
+   * @param generateToc Whether to generate TOC immediately after completion
    */
-  const completeBiography = async (biographyId: string): Promise<void> => {
+  const completeBiography = async (biographyId: string, generateToc: boolean = true): Promise<void> => {
     if (!biographyId) {
       showErrorToast("מזהה ביוגרפיה חסר");
       return;
@@ -28,7 +29,10 @@ export const useCompleteBiography = () => {
       // Update biography status to indicate questionnaire completion
       const { error } = await supabase
         .from("biographies")
-        .update({ status: "QuestionnaireCompleted", updated_at: new Date().toISOString() })
+        .update({ 
+          status: "QuestionnaireCompleted", 
+          updated_at: new Date().toISOString() 
+        })
         .eq("id", biographyId);
         
       if (error) {
@@ -38,8 +42,26 @@ export const useCompleteBiography = () => {
       // Show success message
       showSuccessToast("השאלון הושלם בהצלחה!");
       
-      // Navigate to dashboard after successful update
-      navigate(`/dashboard`);
+      // Generate TOC or navigate to dashboard
+      if (generateToc) {
+        try {
+          const { error } = await supabase.functions.invoke("generate-toc", {
+            body: { biographyId }
+          });
+          
+          if (error) throw error;
+          
+          // Navigate to TOC page after successful generation
+          navigate(`/biography/${biographyId}/toc`);
+        } catch (error) {
+          console.error("Error generating TOC:", error);
+          showErrorToast("שגיאה ביצירת תוכן העניינים, תוכל לנסות שוב מלוח הבקרה");
+          navigate(`/dashboard`);
+        }
+      } else {
+        // Navigate to dashboard if not generating TOC
+        navigate(`/dashboard`);
+      }
       
     } catch (error) {
       console.error("Error updating biography status:", error);

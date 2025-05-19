@@ -13,6 +13,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          progress: string | null
           status: string
           title: string
           updated_at: string
@@ -21,6 +22,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          progress?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -29,6 +31,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          progress?: string | null
           status?: string
           title?: string
           updated_at?: string
@@ -75,6 +78,44 @@ export type Database = {
           },
         ]
       }
+      biography_chapters: {
+        Row: {
+          biography_id: string
+          chapter_order: number
+          content: string | null
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          biography_id: string
+          chapter_order: number
+          content?: string | null
+          created_at?: string
+          id?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          biography_id?: string
+          chapter_order?: number
+          content?: string | null
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "biography_chapters_biography_id_fkey"
+            columns: ["biography_id"]
+            isOneToOne: false
+            referencedRelation: "biographies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       biography_questions: {
         Row: {
           created_at: string
@@ -95,6 +136,79 @@ export type Database = {
           question_text?: string
         }
         Relationships: []
+      }
+      biography_settings: {
+        Row: {
+          biography_id: string
+          created_at: string
+          id: string
+          language: string | null
+          tone: string | null
+          updated_at: string
+          writing_style: string | null
+        }
+        Insert: {
+          biography_id: string
+          created_at?: string
+          id?: string
+          language?: string | null
+          tone?: string | null
+          updated_at?: string
+          writing_style?: string | null
+        }
+        Update: {
+          biography_id?: string
+          created_at?: string
+          id?: string
+          language?: string | null
+          tone?: string | null
+          updated_at?: string
+          writing_style?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "biography_settings_biography_id_fkey"
+            columns: ["biography_id"]
+            isOneToOne: true
+            referencedRelation: "biographies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      biography_toc: {
+        Row: {
+          approved: boolean
+          biography_id: string
+          created_at: string
+          id: string
+          structure: Json
+          updated_at: string
+        }
+        Insert: {
+          approved?: boolean
+          biography_id: string
+          created_at?: string
+          id?: string
+          structure?: Json
+          updated_at?: string
+        }
+        Update: {
+          approved?: boolean
+          biography_id?: string
+          created_at?: string
+          id?: string
+          structure?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "biography_toc_biography_id_fkey"
+            columns: ["biography_id"]
+            isOneToOne: true
+            referencedRelation: "biographies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

@@ -1,6 +1,6 @@
 
 import { format } from 'date-fns';
-import { FileQuestion, Trash2 } from 'lucide-react';
+import { FileQuestion, BookOpen, Trash2, FileEdit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Card, 
@@ -28,6 +28,7 @@ export interface Biography {
   id: string;
   title: string;
   status: string;
+  progress?: string;
   created_at: string;
   updated_at: string;
 }
@@ -69,6 +70,49 @@ export const BiographyCard = ({ biography, onDelete }: BiographyCardProps) => {
     }
   };
 
+  const getProgressText = (progress?: string) => {
+    switch (progress?.toLowerCase()) {
+      case 'questionnaire':
+        return 'Answer questions';
+      case 'toc':
+        return 'Edit table of contents';
+      case 'chapters':
+        return 'Edit chapters';
+      case 'complete':
+        return 'View complete biography';
+      default:
+        return 'Continue';
+    }
+  };
+
+  const getProgressIcon = (progress?: string) => {
+    switch (progress?.toLowerCase()) {
+      case 'questionnaire':
+        return <FileQuestion className="mr-2 h-4 w-4" />;
+      case 'toc':
+        return <BookOpen className="mr-2 h-4 w-4" />;
+      case 'chapters':
+      case 'complete':
+        return <FileEdit className="mr-2 h-4 w-4" />;
+      default:
+        return <FileQuestion className="mr-2 h-4 w-4" />;
+    }
+  };
+
+  const getProgressPath = (biographyId: string, progress?: string) => {
+    switch (progress?.toLowerCase()) {
+      case 'questionnaire':
+        return `/biography/${biographyId}/questionnaire`;
+      case 'toc':
+        return `/biography/${biographyId}/toc`;
+      case 'chapters':
+      case 'complete':
+        return `/biography/${biographyId}/editor`;
+      default:
+        return `/biography/${biographyId}/questionnaire`;
+    }
+  };
+
   return (
     <Card key={biography.id} className="overflow-hidden">
       <CardHeader className="pb-3">
@@ -97,10 +141,10 @@ export const BiographyCard = ({ biography, onDelete }: BiographyCardProps) => {
         <Button 
           variant="outline" 
           className="border-[#5B9AA0] text-[#5B9AA0] hover:bg-[#5B9AA0] hover:text-white"
-          onClick={() => navigate(`/biography/${biography.id}/questionnaire`)}
+          onClick={() => navigate(getProgressPath(biography.id, biography.progress))}
         >
-          <FileQuestion className="mr-2 h-4 w-4" />
-          Questionnaire
+          {getProgressIcon(biography.progress)}
+          {getProgressText(biography.progress)}
         </Button>
         
         <AlertDialog>

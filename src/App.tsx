@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import BiographyQuestionnaire from "./pages/BiographyQuestionnaire";
+import BiographyTOC from "./pages/BiographyTOC";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 
@@ -48,6 +49,11 @@ const App = () => {
               <Route path="/biography/:biographyId/questionnaire" element={
                 <ProtectedRoute>
                   <BiographyQuestionnaire />
+                </ProtectedRoute>
+              } />
+              <Route path="/biography/:biographyId/toc" element={
+                <ProtectedRoute>
+                  <BiographyTOC />
                 </ProtectedRoute>
               } />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
