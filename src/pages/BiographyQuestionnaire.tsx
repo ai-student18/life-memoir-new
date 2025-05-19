@@ -27,7 +27,7 @@ const BiographyQuestionnaire = () => {
   const { data: questions, isLoading: questionsLoading } = useQuestions();
   const { answers, answeredCount, isLoading: answersLoading, saveAnswer } = useQuestionnaireAnswers(biographyId);
   const { completeBiography } = useCompleteBiography();
-  const { generateTOC } = useTOCGenerate();
+  const { generateTOC, isGenerating } = useTOCGenerate();
   const { isKeyConfigured, isChecking } = useGeminiApiKey();
 
   // Check if data is still loading
@@ -104,10 +104,10 @@ const BiographyQuestionnaire = () => {
                 variant="outline"
                 className="flex items-center gap-2" 
                 onClick={handleGenerateTOC}
-                disabled={isGeneratingTOC || answeredCount === 0}
+                disabled={isGeneratingTOC || answeredCount === 0 || isGenerating}
               >
                 <BookText className="h-4 w-4" />
-                {isGeneratingTOC ? "מייצר תוכן עניינים..." : "צור תוכן עניינים"}
+                {isGeneratingTOC || isGenerating ? "מייצר תוכן עניינים..." : "צור תוכן עניינים"}
               </Button>
             </div>
             

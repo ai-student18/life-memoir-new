@@ -9,23 +9,40 @@ import { toast } from "@/hooks/use-toast";
 export const useGeminiApiKey = () => {
   const [isKeyConfigured, setIsKeyConfigured] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const checkApiKey = async () => {
       try {
+        console.log("Checking Gemini API key configuration...");
+        
         const { data, error } = await supabase.functions.invoke("check-gemini-key", {
           body: {}
         });
         
         if (error) {
           console.error("Error checking Gemini API key:", error);
+          setError(error.message);
+          setIsKeyConfigured(false);
+        } else if (!data) {
+          console.error("No data returned from check-gemini-key function");
+          setError("No response from API key check");
           setIsKeyConfigured(false);
         } else {
+          console.log("Gemini API key check result:", data);
           setIsKeyConfigured(data?.isConfigured === true);
+          
+          if (data?.isConfigured !== true) {
+            setError(data?.message || "API key is not configured correctly");
+          } else {
+            setError(null);
+          }
         }
       } catch (error) {
-        console.error("Error checking Gemini API key:", error);
+        console.error("Exception checking Gemini API key:", error);
         setIsKeyConfigured(false);
+        setError(error instanceof Error ? error.message : "Unknown error checking API key");
+        
         toast({
           title: "שגיאה בבדיקת מפתח API",
           description: "לא ניתן לבדוק האם מפתח ה-API של Gemini מוגדר במערכת",
@@ -39,5 +56,5 @@ export const useGeminiApiKey = () => {
     checkApiKey();
   }, []);
 
-  return { isKeyConfigured, isChecking };
+  return { isKeyConfigured, isChecking, error };
 };

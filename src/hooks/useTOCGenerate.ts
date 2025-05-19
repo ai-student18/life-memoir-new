@@ -36,16 +36,18 @@ export const useTOCGenerate = () => {
       // Check if there are any answers for this biography
       const { data: answers, error: answersError } = await supabase
         .from("biography_answers")
-        .select("id")
-        .eq("biography_id", biographyId)
-        .limit(1);
+        .select("id, answer_text")
+        .eq("biography_id", biographyId);
         
       if (answersError) {
         console.error("Error checking for answers:", answersError);
         throw answersError;
       }
       
-      if (!answers || answers.length === 0) {
+      // Check if there are any answers with content
+      const answersWithContent = answers?.filter(a => a.answer_text?.trim()) || [];
+      
+      if (!answers || answers.length === 0 || answersWithContent.length === 0) {
         toast({
           title: "שגיאה",
           description: "לא נמצאו תשובות לביוגרפיה זו. אנא ענה על לפחות שאלה אחת.",
@@ -54,24 +56,27 @@ export const useTOCGenerate = () => {
         return;
       }
 
+      console.log(`Invoking generate-toc with biography ID: ${biographyId}`);
+      console.log(`Found ${answersWithContent.length} answers with content out of ${answers.length} total answers`);
+
       // Generate the TOC using the edge function
       const { data, error } = await supabase.functions.invoke("generate-toc", {
         body: { biographyId }
       });
 
       if (error) {
-        console.error("Edge function error:", error);
-        throw error;
+        console.error("Edge function invocation error:", error);
+        throw new Error(`Edge function error: ${error.message}`);
+      }
+
+      if (!data) {
+        console.error("No data returned from edge function");
+        throw new Error("No data returned from edge function");
       }
 
       if (data?.error) {
         console.error("TOC generation error:", data.error);
-        toast({
-          title: "שגיאה",
-          description: data.error || "נכשל ביצירת תוכן העניינים",
-          variant: "destructive"
-        });
-        return;
+        throw new Error(data.error);
       }
 
       toast({
@@ -84,9 +89,15 @@ export const useTOCGenerate = () => {
 
     } catch (error) {
       console.error("Error generating TOC:", error);
+      let errorMessage = "נכשל ביצירת תוכן העניינים";
+      
+      if (error instanceof Error) {
+        errorMessage = `שגיאה: ${error.message}`;
+      }
+      
       toast({
         title: "שגיאה",
-        description: error instanceof Error ? error.message : "נכשל ביצירת תוכן העניינים",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
