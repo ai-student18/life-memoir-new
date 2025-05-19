@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
  */
 export const useTOCGenerate = () => {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const generateTOC = async (biographyId: string): Promise<void> => {
     if (!biographyId) {
@@ -21,6 +22,7 @@ export const useTOCGenerate = () => {
     }
 
     setIsGenerating(true);
+    setError(null);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -66,7 +68,7 @@ export const useTOCGenerate = () => {
 
       if (error) {
         console.error("Edge function invocation error:", error);
-        throw new Error(`Edge function error: ${error.message}`);
+        throw new Error(`Edge function error: ${error.message || "Unknown error"}`);
       }
 
       if (!data) {
@@ -95,6 +97,7 @@ export const useTOCGenerate = () => {
         errorMessage = `שגיאה: ${error.message}`;
       }
       
+      setError(errorMessage);
       toast({
         title: "שגיאה",
         description: errorMessage,
@@ -105,5 +108,5 @@ export const useTOCGenerate = () => {
     }
   };
 
-  return { generateTOC, isGenerating };
+  return { generateTOC, isGenerating, error };
 };

@@ -13,22 +13,24 @@ import { useCompleteBiography } from "@/hooks/useCompleteBiography";
 import { Answer } from "@/types/questionnaire";
 import { useTOCGenerate } from "@/hooks/useTOCGenerate";
 import { Button } from "@/components/ui/button";
-import { BookText } from "lucide-react";
+import { AlertCircle, BookText, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useGeminiApiKey } from "@/hooks/useGeminiApiKey";
+import { ErrorDisplay } from "@/components/ui/error-display";
 
 const BiographyQuestionnaire = () => {
   const { biographyId } = useParams<{ biographyId: string }>();
   const [isGeneratingTOC, setIsGeneratingTOC] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
   
   // Custom hooks to fetch and manage data
   const { data: biography, isLoading: biographyLoading } = useBiography(biographyId);
   const { data: questions, isLoading: questionsLoading } = useQuestions();
   const { answers, answeredCount, isLoading: answersLoading, saveAnswer } = useQuestionnaireAnswers(biographyId);
   const { completeBiography } = useCompleteBiography();
-  const { generateTOC, isGenerating } = useTOCGenerate();
-  const { isKeyConfigured, isChecking } = useGeminiApiKey();
+  const { generateTOC, isGenerating, error: tocError } = useTOCGenerate();
+  const { isKeyConfigured, isChecking, error: keyError } = useGeminiApiKey();
 
   // Check if data is still loading
   const isLoading = biographyLoading || questionsLoading || answersLoading || isChecking;
@@ -59,19 +61,25 @@ const BiographyQuestionnaire = () => {
   const handleGenerateTOC = async () => {
     if (!biographyId) return;
     
+    setGenerationError(null);
+    
     if (answeredCount === 0) {
+      const errorMsg = "יש לענות על לפחות שאלה אחת לפני יצירת תוכן העניינים";
+      setGenerationError(errorMsg);
       toast({
         title: "לא ניתן ליצור תוכן עניינים",
-        description: "יש לענות על לפחות שאלה אחת לפני יצירת תוכן העניינים",
+        description: errorMsg,
         variant: "destructive"
       });
       return;
     }
     
     if (!isKeyConfigured) {
+      const errorMsg = "מפתח ה-API של Gemini לא מוגדר במערכת. אנא פנה למנהל המערכת.";
+      setGenerationError(errorMsg);
       toast({
         title: "מפתח API חסר",
-        description: "מפתח ה-API של Gemini לא מוגדר במערכת. אנא פנה למנהל המערכת.",
+        description: errorMsg,
         variant: "destructive"
       });
       return;
@@ -80,10 +88,19 @@ const BiographyQuestionnaire = () => {
     setIsGeneratingTOC(true);
     try {
       await generateTOC(biographyId);
+    } catch (error) {
+      if (error instanceof Error) {
+        setGenerationError(error.message);
+      } else {
+        setGenerationError("אירעה שגיאה לא צפויה בעת יצירת תוכן העניינים");
+      }
     } finally {
       setIsGeneratingTOC(false);
     }
   };
+
+  // Combine all potential errors
+  const hasError = keyError || tocError || generationError;
 
   return (
     <div className="min-h-screen bg-white">
@@ -91,6 +108,16 @@ const BiographyQuestionnaire = () => {
       
       <div className="container mx-auto px-4 py-8 pt-24">
         <QuestionnaireHeader title={biography.title} />
+        
+        {hasError && (
+          <div className="mb-6">
+            <ErrorDisplay
+              title="שגיאה בעת יצירת תוכן העניינים"
+              message={hasError}
+              variant="card"
+            />
+          </div>
+        )}
         
         {questions && questions.length > 0 && (
           <>
@@ -106,8 +133,17 @@ const BiographyQuestionnaire = () => {
                 onClick={handleGenerateTOC}
                 disabled={isGeneratingTOC || answeredCount === 0 || isGenerating}
               >
-                <BookText className="h-4 w-4" />
-                {isGeneratingTOC || isGenerating ? "מייצר תוכן עניינים..." : "צור תוכן עניינים"}
+                {isGeneratingTOC || isGenerating ? (
+                  <>
+                    <span className="animate-spin mr-2">⟳</span>
+                    מייצר תוכן עניינים...
+                  </>
+                ) : (
+                  <>
+                    <BookText className="h-4 w-4" />
+                    צור תוכן עניינים
+                  </>
+                )}
               </Button>
             </div>
             
