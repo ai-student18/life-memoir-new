@@ -1,72 +1,30 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useTOC, TOCChapter } from "@/hooks/useTOC";
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { PlusCircle, Save, ArrowRight } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { useTOC } from "@/hooks/useTOC";
 import { supabase } from "@/integrations/supabase/client";
 import { BiographyStatus } from "@/types/biography";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  verticalListSortingStrategy,
-  sortableKeyboardCoordinates
-} from "@dnd-kit/sortable";
-import TOCChapterCard from "./TOCChapterCard";
+import { toast } from "@/hooks/use-toast";
+import TOCHeader from "./TOCHeader";
+import ChaptersList from "./ChaptersList";
+import { validateTOC } from "./TOCValidation";
+import { useChapterManagement } from "./useChapterManagement";
 
 const TOCEditor = () => {
   const { biographyId } = useParams<{ biographyId: string }>();
   const navigate = useNavigate();
   const { isLoading, error, updateTOC, chapters } = useTOC(biographyId);
-  const [localChapters, setLocalChapters] = useState<TOCChapter[]>([]);
+  const { 
+    chapters: localChapters, 
+    handleAddChapter, 
+    handleUpdateChapter, 
+    handleDeleteChapter,
+    setChaptersList
+  } = useChapterManagement(chapters);
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    if (chapters) {
-      setLocalChapters([...chapters]);
-    }
-  }, [chapters]);
-
-  const handleAddChapter = () => {
-    setLocalChapters([
-      ...localChapters,
-      { title: "New Chapter", description: "Description for this chapter" },
-    ]);
-  };
-
-  const handleUpdateChapter = (index: number, field: keyof TOCChapter, value: string) => {
-    const updatedChapters = [...localChapters];
-    updatedChapters[index] = {
-      ...updatedChapters[index],
-      [field]: value,
-    };
-    setLocalChapters(updatedChapters);
-  };
-
-  const handleDeleteChapter = (index: number) => {
-    setLocalChapters(localChapters.filter((_, i) => i !== index));
-  };
-
   const handleSaveTOC = async () => {
-    if (localChapters.some(chapter => !chapter.title.trim())) {
-      toast({
-        title: "Validation Error",
-        description: "All chapters must have a title",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!validateTOC(localChapters)) return;
 
     setIsSaving(true);
     try {
@@ -77,14 +35,7 @@ const TOCEditor = () => {
   };
 
   const handleApproveAndContinue = async () => {
-    if (localChapters.length === 0) {
-      toast({
-        title: "Validation Error",
-        description: "Please add at least one chapter before continuing",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!validateTOC(localChapters)) return;
 
     setIsSaving(true);
     try {
@@ -148,27 +99,6 @@ const TOCEditor = () => {
     }
   };
 
-  // DnD functionality
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    
-    if (active.id !== over?.id) {
-      setLocalChapters((items) => {
-        const oldIndex = items.findIndex((_, i) => `chapter-${i}` === active.id);
-        const newIndex = items.findIndex((_, i) => `chapter-${i}` === over?.id);
-        
-        return arrayMove(items, oldIndex, newIndex);
-      });
-    }
-  };
-
   if (isLoading) {
     return <div className="flex justify-center p-8">Loading TOC...</div>;
   }
@@ -179,74 +109,19 @@ const TOCEditor = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">Table of Contents</h2>
-          <p className="text-muted-foreground">
-            Review and edit the suggested chapters for your biography
-          </p>
-        </div>
-
-        <div className="flex space-x-2">
-          <Button
-            variant="outline"
-            onClick={handleSaveTOC}
-            disabled={isSaving}
-          >
-            <Save className="mr-2 h-4 w-4" />
-            Save
-          </Button>
-          <Button
-            onClick={handleApproveAndContinue}
-            disabled={isSaving}
-          >
-            Approve & Continue
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Chapters</CardTitle>
-          <CardDescription>
-            Drag to reorder, or edit chapter titles and descriptions
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={localChapters.map((_, index) => `chapter-${index}`)}
-              strategy={verticalListSortingStrategy}
-            >
-              {localChapters.map((chapter, index) => (
-                <TOCChapterCard
-                  key={`chapter-${index}`}
-                  id={`chapter-${index}`}
-                  index={index}
-                  chapter={chapter}
-                  onUpdate={handleUpdateChapter}
-                  onDelete={handleDeleteChapter}
-                />
-              ))}
-            </SortableContext>
-          </DndContext>
-        </CardContent>
-        <CardFooter>
-          <Button
-            variant="outline"
-            onClick={handleAddChapter}
-            className="w-full"
-          >
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Chapter
-          </Button>
-        </CardFooter>
-      </Card>
+      <TOCHeader
+        onSave={handleSaveTOC}
+        onApprove={handleApproveAndContinue}
+        isSaving={isSaving}
+      />
+      
+      <ChaptersList
+        chapters={localChapters}
+        onChaptersChange={setChaptersList}
+        onUpdateChapter={handleUpdateChapter}
+        onDeleteChapter={handleDeleteChapter}
+        onAddChapter={handleAddChapter}
+      />
     </div>
   );
 };
