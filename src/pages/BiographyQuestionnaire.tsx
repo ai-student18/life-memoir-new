@@ -13,7 +13,7 @@ import { useCompleteBiography } from "@/hooks/useCompleteBiography";
 import { Answer } from "@/types/questionnaire";
 import { useTOCGenerate } from "@/hooks/useTOCGenerate";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, BookText, AlertTriangle } from "lucide-react";
+import { BookText } from "lucide-react";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useGeminiApiKey } from "@/hooks/useGeminiApiKey";
