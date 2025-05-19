@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { retry } from "@/utils/errorHandler";
 
 /**
  * Hook to check if the Gemini API key is configured
@@ -16,13 +17,23 @@ export const useGeminiApiKey = () => {
       try {
         console.log("Checking Gemini API key configuration...");
         
-        const { data, error } = await supabase.functions.invoke("check-gemini-key", {
-          body: {}
-        });
+        // Use retry logic for better reliability
+        const { data, error } = await retry(
+          () => supabase.functions.invoke("check-gemini-key", {
+            body: {}
+          }),
+          {
+            retries: 2,
+            delay: 1000,
+            onRetry: (attempt) => {
+              console.log(`Retry attempt ${attempt} for check-gemini-key`);
+            }
+          }
+        );
         
         if (error) {
           console.error("Error checking Gemini API key:", error);
-          setError(error.message);
+          setError(error.message || "Error checking Gemini API key");
           setIsKeyConfigured(false);
         } else if (!data) {
           console.error("No data returned from check-gemini-key function");

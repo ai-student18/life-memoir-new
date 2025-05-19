@@ -1,11 +1,8 @@
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../_shared/cors.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || 
                        Deno.env.get("GEMINI-API-KEY");
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 
 Deno.serve(async (req) => {
   // Handle CORS for preflight requests
@@ -18,7 +15,7 @@ Deno.serve(async (req) => {
     
     // Check if API key is present
     if (!GEMINI_API_KEY) {
-      console.log("Gemini API key is not configured");
+      console.log("No Gemini API key found in environment variables");
       return new Response(JSON.stringify({
         isConfigured: false,
         message: "Gemini API key is not configured in the environment"
@@ -30,23 +27,33 @@ Deno.serve(async (req) => {
 
     // Validate Gemini API key with a lightweight call
     try {
+      console.log("Attempting to validate Gemini API key");
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}`,
+        "https://generativelanguage.googleapis.com/v1beta/models",
         {
           method: "GET",
           headers: {
+            "Authorization": `Bearer ${GEMINI_API_KEY}`,
             "Content-Type": "application/json"
           }
         }
       );
 
+      const responseData = await response.json();
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Gemini API key validation failed:", errorData);
+        console.error("Gemini API key validation failed:", responseData);
+        let errorMessage = "Invalid Gemini API key";
+        
+        if (responseData.error && responseData.error.message) {
+          errorMessage = `Invalid Gemini API key: ${responseData.error.message}`;
+        }
+        
         return new Response(JSON.stringify({
           isConfigured: false,
-          message: `Invalid Gemini API key: ${errorData?.error?.message || response.statusText}`,
-          statusCode: response.status
+          message: errorMessage,
+          statusCode: response.status,
+          details: responseData
         }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" }

@@ -2,6 +2,8 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { extractErrorMessage } from "@/utils/errorHandling";
+import { retry } from "@/utils/errorHandler";
 
 /**
  * Custom hook to generate TOC for a biography
@@ -61,14 +63,23 @@ export const useTOCGenerate = () => {
       console.log(`Invoking generate-toc with biography ID: ${biographyId}`);
       console.log(`Found ${answersWithContent.length} answers with content out of ${answers.length} total answers`);
 
-      // Generate the TOC using the edge function
-      const { data, error } = await supabase.functions.invoke("generate-toc", {
-        body: { biographyId }
-      });
+      // Generate the TOC using the edge function with retry logic
+      const { data, error } = await retry(
+        () => supabase.functions.invoke("generate-toc", {
+          body: { biographyId }
+        }),
+        {
+          retries: 2,
+          delay: 1000,
+          onRetry: (attempt, err) => {
+            console.log(`Retry attempt ${attempt} after error:`, err);
+          }
+        }
+      );
 
       if (error) {
         console.error("Edge function invocation error:", error);
-        throw new Error(`Edge function error: ${error.message || "Unknown error"}`);
+        throw new Error(`Edge function error: ${extractErrorMessage(error)}`);
       }
 
       if (!data) {
@@ -78,7 +89,17 @@ export const useTOCGenerate = () => {
 
       if (data?.error) {
         console.error("TOC generation error:", data.error);
-        throw new Error(data.error);
+        
+        // Handle specific error codes
+        if (data.code === "NO_ANSWERS" || data.code === "EMPTY_ANSWERS") {
+          throw new Error("לא נמצאו תשובות מספיקות ליצירת תוכן העניינים. אנא ענה על יותר שאלות.");
+        } else if (data.code === "MISSING_API_KEY") {
+          throw new Error("מפתח ה-API של Gemini אינו מוגדר במערכת.");
+        } else if (data.code === "GEMINI_API_ERROR") {
+          throw new Error("שגיאה בשירות ה-AI. אנא נסה שוב מאוחר יותר.");
+        } else {
+          throw new Error(data.error);
+        }
       }
 
       toast({
@@ -94,7 +115,7 @@ export const useTOCGenerate = () => {
       let errorMessage = "נכשל ביצירת תוכן העניינים";
       
       if (error instanceof Error) {
-        errorMessage = `שגיאה: ${error.message}`;
+        errorMessage = error.message;
       }
       
       setError(errorMessage);

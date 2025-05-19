@@ -18,6 +18,7 @@ import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useGeminiApiKey } from "@/hooks/useGeminiApiKey";
 import { ErrorDisplay } from "@/components/ui/error-display";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 const BiographyQuestionnaire = () => {
   const { biographyId } = useParams<{ biographyId: string }>();
@@ -109,6 +110,16 @@ const BiographyQuestionnaire = () => {
       <div className="container mx-auto px-4 py-8 pt-24">
         <QuestionnaireHeader title={biography.title} />
         
+        {!isKeyConfigured && !isChecking && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertTitle>אין מפתח API לשירות Gemini</AlertTitle>
+            <AlertDescription>
+              מפתח ה-API של Gemini אינו מוגדר במערכת. לא ניתן ליצור תוכן עניינים אוטומטי.
+              אנא פנה למנהל המערכת כדי להגדיר את המפתח.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         {hasError && (
           <div className="mb-6">
             <ErrorDisplay
@@ -131,7 +142,7 @@ const BiographyQuestionnaire = () => {
                 variant="outline"
                 className="flex items-center gap-2" 
                 onClick={handleGenerateTOC}
-                disabled={isGeneratingTOC || answeredCount === 0 || isGenerating}
+                disabled={isGeneratingTOC || answeredCount === 0 || isGenerating || !isKeyConfigured}
               >
                 {isGeneratingTOC || isGenerating ? (
                   <>
