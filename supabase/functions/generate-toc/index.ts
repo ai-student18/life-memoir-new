@@ -60,12 +60,15 @@ async function fetchAnswers(supabase: any, biographyId: string): Promise<any[]> 
       throw new Error("No data returned when fetching answers");
     }
 
-    if (data.length === 0) {
-      console.error("No answers found for this biography");
-      throw new Error("No answers found for this biography");
+    // Check if we have at least one non-empty answer
+    const answersWithContent = data.filter(answer => answer.answer_text && answer.answer_text.trim() !== "");
+    
+    if (answersWithContent.length === 0) {
+      console.error("No answers with content found for this biography");
+      throw new Error("No answers with content found for this biography");
     }
     
-    console.log(`Found ${data.length} answers for biography ${biographyId}`);
+    console.log(`Found ${answersWithContent.length} answers with content for biography ${biographyId} out of ${data.length} total answers`);
     return data;
   } catch (error) {
     console.error(`Error in fetchAnswers: ${error.message}`);
@@ -401,7 +404,7 @@ Deno.serve(async (req) => {
     try {
       answers = await fetchAnswers(supabase, biographyId);
     } catch (error) {
-      const isNoAnswers = error.message.includes("No answers found");
+      const isNoAnswers = error.message.includes("No answers") || error.message.includes("No answers with content");
       return new Response(JSON.stringify({ 
         error: error.message,
         code: isNoAnswers ? "NO_ANSWERS" : "ANSWERS_ERROR"
@@ -484,7 +487,7 @@ Deno.serve(async (req) => {
     
     // Determine appropriate status code and error code
     const isClientError = error.message.includes("No answers found") || 
-                         error.message.includes("Biography ID is required");
+                        error.message.includes("Biography ID is required");
     const statusCode = isClientError ? 400 : 500;
     const errorCode = error.message.includes("No answers found") ? "NO_ANSWERS" : 
                       error.message.includes("Biography ID") ? "INVALID_ID" : "UNKNOWN_ERROR";

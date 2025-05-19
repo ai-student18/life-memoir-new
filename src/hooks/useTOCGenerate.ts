@@ -51,10 +51,19 @@ export const useTOCGenerate = () => {
       // Check if there are any answers with content
       const answersWithContent = answers?.filter(a => a.answer_text?.trim()) || [];
       
-      if (!answers || answers.length === 0 || answersWithContent.length === 0) {
+      if (!answers || answers.length === 0) {
         toast({
           title: "שגיאה",
           description: "לא נמצאו תשובות לביוגרפיה זו. אנא ענה על לפחות שאלה אחת.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (answersWithContent.length === 0) {
+        toast({
+          title: "שגיאה",
+          description: "לא נמצאו תשובות עם תוכן לביוגרפיה זו. אנא הוסף תוכן לפחות לתשובה אחת.",
           variant: "destructive"
         });
         return;

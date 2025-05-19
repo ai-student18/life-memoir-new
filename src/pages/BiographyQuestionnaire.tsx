@@ -36,6 +36,9 @@ const BiographyQuestionnaire = () => {
   // Check if data is still loading
   const isLoading = biographyLoading || questionsLoading || answersLoading || isChecking;
   
+  // Check if there's at least one answer with content
+  const hasAnswerWithContent = Object.values(answers).some(answer => answer.answer_text?.trim());
+  
   // Show loading state while data is being fetched
   if (isLoading) {
     return <QuestionnaireLoading />;
@@ -64,7 +67,8 @@ const BiographyQuestionnaire = () => {
     
     setGenerationError(null);
     
-    if (answeredCount === 0) {
+    // Check if we have any answers with content
+    if (!hasAnswerWithContent) {
       const errorMsg = "יש לענות על לפחות שאלה אחת לפני יצירת תוכן העניינים";
       setGenerationError(errorMsg);
       toast({
@@ -142,7 +146,7 @@ const BiographyQuestionnaire = () => {
                 variant="outline"
                 className="flex items-center gap-2" 
                 onClick={handleGenerateTOC}
-                disabled={isGeneratingTOC || answeredCount === 0 || isGenerating || !isKeyConfigured}
+                disabled={isGeneratingTOC || !hasAnswerWithContent || isGenerating || !isKeyConfigured}
               >
                 {isGeneratingTOC || isGenerating ? (
                   <>
