@@ -31,6 +31,7 @@ const QuestionnaireForm = ({
     handleNext,
     handlePrevious,
     handleSaveAndExit,
+    jumpToQuestion,
   } = useQuestionnaireForm({
     questions,
     biographyId,
@@ -73,7 +74,8 @@ const QuestionnaireForm = ({
 
       <QuestionPagination 
         currentQuestionIndex={currentQuestionIndex} 
-        questions={questions} 
+        questions={questions}
+        onQuestionSelect={jumpToQuestion} 
       />
     </div>
   );

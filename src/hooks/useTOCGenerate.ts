@@ -13,8 +13,8 @@ export const useTOCGenerate = () => {
   const generateTOC = async (biographyId: string): Promise<void> => {
     if (!biographyId) {
       toast({
-        title: "Error",
-        description: "Biography ID is required",
+        title: "שגיאה",
+        description: "נדרש מזהה ביוגרפיה",
         variant: "destructive"
       });
       return;
@@ -24,7 +24,7 @@ export const useTOCGenerate = () => {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("No session found");
+      if (!session) throw new Error("לא נמצא מידע על המשתמש");
 
       // Check if there are any answers for this biography
       const { data: answers, error: answersError } = await supabase
@@ -37,11 +37,10 @@ export const useTOCGenerate = () => {
       
       if (!answers || answers.length === 0) {
         toast({
-          title: "Error",
-          description: "No answers found for this biography. Please complete the questionnaire first.",
+          title: "שגיאה",
+          description: "לא נמצאו תשובות לביוגרפיה זו. אנא ענה על לפחות שאלה אחת.",
           variant: "destructive"
         });
-        setIsGenerating(false);
         return;
       }
 
@@ -53,18 +52,18 @@ export const useTOCGenerate = () => {
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Table of contents generated successfully",
+        title: "הצלחה",
+        description: "תוכן העניינים נוצר בהצלחה",
       });
 
-      // Force reload the page to get the latest TOC data
-      window.location.reload();
+      // Navigate to the TOC page
+      window.location.href = `/biography/${biographyId}/toc`;
 
     } catch (error) {
       console.error("Error generating TOC:", error);
       toast({
-        title: "Error",
-        description: "Failed to generate table of contents",
+        title: "שגיאה",
+        description: "נכשל ביצירת תוכן העניינים",
         variant: "destructive"
       });
     } finally {

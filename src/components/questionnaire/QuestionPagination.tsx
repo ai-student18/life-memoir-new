@@ -82,13 +82,13 @@ const QuestionPagination = ({
         {questions.map((_, index) => (
           <button
             key={index}
+            onClick={() => onQuestionSelect?.(index)}
             className={cn(
               "w-3 h-3 rounded-full transition-colors flex-shrink-0",
               index === currentQuestionIndex
                 ? "bg-[#FFD217]"
                 : "bg-gray-300 hover:bg-gray-400"
             )}
-            onClick={() => onQuestionSelect?.(index)}
             aria-label={`עבור לשאלה ${index + 1}`}
             aria-current={index === currentQuestionIndex ? "true" : "false"}
           />

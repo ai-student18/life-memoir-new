@@ -99,13 +99,15 @@ export const useQuestionnaireForm = ({
     }
   };
   
-  const jumpToQuestion = (index: number) => {
+  const jumpToQuestion = async (index: number) => {
     if (index >= 0 && index < questions.length) {
-      form.handleSubmit(handleSaveAnswer)().then(() => {
+      try {
+        // Save the current answer before jumping
+        await form.handleSubmit(handleSaveAnswer)();
         setCurrentQuestionIndex(index);
-      }).catch((error) => {
+      } catch (error) {
         showErrorToast(error, "שגיאה במעבר לשאלה");
-      });
+      }
     }
   };
 
