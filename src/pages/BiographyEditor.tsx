@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import NavBar from "@/components/NavBar";
@@ -6,7 +5,6 @@ import { useBiography } from "@/hooks/useBiography";
 import { useTOC } from "@/hooks/useTOC";
 import { useChapters } from "@/hooks/useChapters";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import ChapterEditor from "@/components/editor/ChapterEditor";
 import ChapterSelector from "@/components/editor/ChapterSelector";
@@ -70,7 +68,6 @@ const BiographyEditor = () => {
               chapters={chapters || []}
               activeChapterId={activeChapterId}
               setActiveChapterId={setActiveChapterId}
-              tocData={tocData}
             />
           </div>
           

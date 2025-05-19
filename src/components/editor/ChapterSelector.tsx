@@ -9,14 +9,12 @@ interface ChapterSelectorProps {
   chapters: Chapter[];
   activeChapterId: string | null;
   setActiveChapterId: (id: string) => void;
-  tocData?: TOCData;
 }
 
 const ChapterSelector = ({
   chapters,
   activeChapterId,
   setActiveChapterId,
-  tocData,
 }: ChapterSelectorProps) => {
   return (
     <Card className="h-full">
