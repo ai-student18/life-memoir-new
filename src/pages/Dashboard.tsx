@@ -1,45 +1,19 @@
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, PlusCircle, FileQuestion, Trash2 } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from "sonner";
 import NavBar from '@/components/NavBar';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useQuery } from '@tanstack/react-query';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-
-type Biography = {
-  id: string;
-  title: string;
-  status: string;
-  created_at: string;
-  updated_at: string;
-};
+import { Biography, BiographyCard } from '@/components/dashboard/BiographyCard';
+import { EmptyState } from '@/components/dashboard/EmptyState';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -76,7 +50,7 @@ const Dashboard = () => {
     enabled: !!user
   });
 
-  const handleCreateBiography = async () => {
+  const handleCreateBiography = useCallback(async () => {
     try {
       const title = `New Biography - ${format(new Date(), 'MMM d, yyyy')}`;
       
@@ -99,9 +73,9 @@ const Dashboard = () => {
       console.error('Error creating biography:', error);
       toast.error("Failed to create new biography");
     }
-  };
+  }, [user, navigate, refetch]);
 
-  const handleDeleteBiography = async (id: string) => {
+  const handleDeleteBiography = useCallback(async (id: string) => {
     try {
       const { error } = await supabase
         .from('biographies')
@@ -116,132 +90,31 @@ const Dashboard = () => {
       console.error('Error deleting biography:', error);
       toast.error("Failed to delete biography");
     }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'draft':
-        return 'bg-yellow-200 text-yellow-800';
-      case 'questionnairecompleted':
-        return 'bg-blue-200 text-blue-800';
-      case 'published':
-        return 'bg-green-200 text-green-800';
-      default:
-        return 'bg-gray-200 text-gray-800';
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'draft':
-        return 'Draft';
-      case 'questionnairecompleted':
-        return 'Completed';
-      case 'published':
-        return 'Published';
-      default:
-        return status;
-    }
-  };
+  }, [refetch]);
 
   // Handle retry logic for data fetching
-  const handleRetry = () => {
+  const handleRetry = useCallback(() => {
     refetch();
-  };
+  }, [refetch]);
 
-  // Render function for biography cards
-  const renderBiographyCards = () => {
+  // Render biography cards or empty state
+  const renderBiographyContent = useCallback(() => {
     if (!biographies.length) {
-      return (
-        <Card className="border border-dashed border-gray-300 bg-gray-50">
-          <CardContent className="pt-6 pb-10 flex flex-col items-center justify-center">
-            <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-              <PlusCircle className="h-8 w-8 text-gray-400" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">No biographies yet</h3>
-            <p className="text-gray-500 text-center max-w-md mb-6">
-              Start documenting your life story or the story of a loved one. Create your first biography now.
-            </p>
-            <Button 
-              className="bg-[#FFD217] hover:bg-[#f8ca00] text-memoir-darkGray"
-              onClick={handleCreateBiography}
-            >
-              <PlusCircle className="mr-2 h-5 w-5" />
-              Create Your First Biography
-            </Button>
-          </CardContent>
-        </Card>
-      );
+      return <EmptyState onCreateBiography={handleCreateBiography} />;
     }
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {biographies.map((biography) => (
-          <Card key={biography.id} className="overflow-hidden">
-            <CardHeader className="pb-3">
-              <div className="flex justify-between items-start">
-                <CardTitle className="text-xl font-bold text-memoir-darkGray truncate">
-                  {biography.title}
-                </CardTitle>
-                <Badge className={`${getStatusColor(biography.status)}`}>
-                  {getStatusText(biography.status)}
-                </Badge>
-              </div>
-              <CardDescription>
-                Updated {format(new Date(biography.updated_at), 'MMM d, yyyy')}
-              </CardDescription>
-            </CardHeader>
-            
-            <CardContent className="pb-2">
-              <div className="h-16 overflow-hidden">
-                <p className="text-gray-600">
-                  {biography.title} - Click to continue working on this memoir
-                </p>
-              </div>
-            </CardContent>
-            
-            <CardFooter className="flex justify-between">
-              <Button 
-                variant="outline" 
-                className="border-[#5B9AA0] text-[#5B9AA0] hover:bg-[#5B9AA0] hover:text-white"
-                onClick={() => navigate(`/biography/${biography.id}/questionnaire`)}
-              >
-                <FileQuestion className="mr-2 h-4 w-4" />
-                Questionnaire
-              </Button>
-              
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="outline" className="border-red-400 text-red-500 hover:bg-red-50">
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete your
-                      biography and all associated content.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      className="bg-red-500 hover:bg-red-600"
-                      onClick={() => handleDeleteBiography(biography.id)}
-                    >
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </CardFooter>
-          </Card>
+          <BiographyCard 
+            key={biography.id} 
+            biography={biography} 
+            onDelete={handleDeleteBiography} 
+          />
         ))}
       </div>
     );
-  };
+  }, [biographies, handleCreateBiography, handleDeleteBiography]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -284,7 +157,7 @@ const Dashboard = () => {
               </AlertDescription>
             </Alert>
           ) : (
-            renderBiographyCards()
+            renderBiographyContent()
           )}
         </div>
       </ErrorBoundary>

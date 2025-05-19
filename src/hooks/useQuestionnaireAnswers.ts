@@ -5,6 +5,10 @@ import { useState, useEffect } from "react";
 import { Answer } from "@/types/questionnaire";
 import { handleApiError, showErrorToast, showSuccessToast } from "@/utils/errorHandling";
 
+/**
+ * Custom hook to manage questionnaire answers for a biography
+ * @param biographyId The ID of the biography
+ */
 export const useQuestionnaireAnswers = (biographyId: string | undefined) => {
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const queryClient = useQueryClient();
@@ -13,7 +17,7 @@ export const useQuestionnaireAnswers = (biographyId: string | undefined) => {
   const { data: existingAnswers, isLoading, error } = useQuery({
     queryKey: ["biography_answers", biographyId],
     queryFn: async () => {
-      if (!biographyId) throw new Error("אין מזהה ביוגרפיה");
+      if (!biographyId) throw new Error("No biography ID provided");
       
       const { data, error } = await supabase
         .from("biography_answers")
