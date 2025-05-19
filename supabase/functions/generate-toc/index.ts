@@ -11,119 +11,113 @@ interface RequestBody {
   biographyId: string;
 }
 
-Deno.serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+interface QuestionAnswer {
+  question: string;
+  answer: string;
+}
+
+// Initialize Supabase client
+function initSupabaseClient() {
+  return createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!);
+}
+
+// Validate request and extract biography ID
+async function validateRequest(req: Request): Promise<string> {
+  // Check authentication
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    throw new Error("Unauthorized");
   }
 
-  try {
-    // Initialize Supabase client
-    const supabase = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!);
+  // Get the request body
+  const requestData: RequestBody = await req.json();
+  const { biographyId } = requestData;
 
-    // Get the user from the request
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-    }
+  if (!biographyId) {
+    throw new Error("Biography ID is required");
+  }
+  
+  return biographyId;
+}
 
-    // Get the request body
-    const requestData: RequestBody = await req.json();
-    const { biographyId } = requestData;
+// Fetch answers for a biography
+async function fetchAnswers(supabase: any, biographyId: string): Promise<any[]> {
+  const { data, error } = await supabase
+    .from("biography_answers")
+    .select("question_id, answer_text")
+    .eq("biography_id", biographyId);
 
-    if (!biographyId) {
-      return new Response(JSON.stringify({ error: "Biography ID is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-    }
+  if (error) {
+    console.error("Error fetching answers:", error);
+    throw new Error("Failed to fetch answers");
+  }
 
-    console.log("Generating TOC for biography:", biographyId);
-    
-    // Get the biography answers
-    const { data: answers, error: answersError } = await supabase
-      .from("biography_answers")
-      .select("question_id, answer_text")
-      .eq("biography_id", biographyId);
+  if (!data || data.length === 0) {
+    throw new Error("No answers found for this biography");
+  }
+  
+  return data;
+}
 
-    if (answersError) {
-      console.error("Error fetching answers:", answersError);
-      return new Response(JSON.stringify({ error: "Failed to fetch answers" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-    }
+// Fetch questions
+async function fetchQuestions(supabase: any): Promise<Record<string, string>> {
+  const { data, error } = await supabase
+    .from("biography_questions")
+    .select("id, question_text");
 
-    if (!answers || answers.length === 0) {
-      return new Response(JSON.stringify({ error: "No answers found for this biography" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-    }
+  if (error) {
+    console.error("Error fetching questions:", error);
+    throw new Error("Failed to fetch questions");
+  }
 
-    // Get the questions to associate with the answers
-    const { data: questions, error: questionsError } = await supabase
-      .from("biography_questions")
-      .select("id, question_text");
+  // Create a map of question IDs to question texts
+  return data.reduce((acc: Record<string, string>, q: any) => {
+    acc[q.id] = q.question_text;
+    return acc;
+  }, {});
+}
 
-    if (questionsError) {
-      console.error("Error fetching questions:", questionsError);
-      return new Response(JSON.stringify({ error: "Failed to fetch questions" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-    }
-
-    // Match questions with answers and format for the API
-    const questionsMap = questions.reduce((acc, q) => {
-      acc[q.id] = q.question_text;
-      return acc;
-    }, {});
-
-    const formattedQA = answers.map(answer => ({
+// Format the question-answer pairs
+function formatQAPairs(
+  answers: any[],
+  questionsMap: Record<string, string>
+): QuestionAnswer[] {
+  return answers
+    .map(answer => ({
       question: questionsMap[answer.question_id],
       answer: answer.answer_text || ""
-    })).filter(qa => qa.answer.trim() !== ""); // Filter out empty answers
+    }))
+    .filter(qa => qa.answer.trim() !== "");
+}
 
-    console.log("Found", formattedQA.length, "question-answer pairs with content");
-    
-    // Check if we have any non-empty answers
-    if (formattedQA.length === 0) {
-      return new Response(JSON.stringify({ error: "No non-empty answers found for this biography" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-    }
-    
-    // Call Gemini API to generate TOC
-    if (!GEMINI_API_KEY) {
-      return new Response(JSON.stringify({ error: "Gemini API key not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-    }
+// Create the system prompt for TOC generation
+function createSystemPrompt(): string {
+  return `You are a professional biographer specializing in creating structured table of contents. 
+  Create a clear, organized table of contents for a biography based on the provided Q&A session.
+  Return ONLY a JSON array of chapters, with each chapter having a 'title' and 'description' field.
+  Follow these guidelines:
+  - Create 5-10 chapters that flow chronologically or thematically
+  - Make chapter titles descriptive and engaging
+  - Include brief descriptions that summarize what each chapter will cover
+  - Ensure chapters collectively tell a cohesive life story
+  - Structure must be valid JSON with no additional text or explanations
+  - Format as: [{"title": "Chapter Title", "description": "Brief description"}]`;
+}
 
-    console.log("Calling Gemini API to generate TOC");
-    
-    // Create a system prompt specifically for TOC generation
-    const systemPrompt = `You are a professional biographer specializing in creating structured table of contents. 
-    Create a clear, organized table of contents for a biography based on the provided Q&A session.
-    Return ONLY a JSON array of chapters, with each chapter having a 'title' and 'description' field.
-    Follow these guidelines:
-    - Create 5-10 chapters that flow chronologically or thematically
-    - Make chapter titles descriptive and engaging
-    - Include brief descriptions that summarize what each chapter will cover
-    - Ensure chapters collectively tell a cohesive life story
-    - Structure must be valid JSON with no additional text or explanations
-    - Format as: [{"title": "Chapter Title", "description": "Brief description"}]`;
-    
-    // Prepare user context from Q&A pairs
-    const userContext = JSON.stringify(formattedQA);
-    
-    const geminiResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent", {
+// Call Gemini API to generate the TOC
+async function generateTOCWithGemini(
+  formattedQA: QuestionAnswer[]
+): Promise<any[]> {
+  if (!GEMINI_API_KEY) {
+    throw new Error("Gemini API key not configured");
+  }
+
+  const systemPrompt = createSystemPrompt();
+  const userContext = JSON.stringify(formattedQA);
+
+  const geminiResponse = await fetch(
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+    {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -147,90 +141,125 @@ Deno.serve(async (req) => {
           maxOutputTokens: 1024,
         }
       })
+    }
+  );
+
+  if (!geminiResponse.ok) {
+    const errorData = await geminiResponse.json();
+    console.error("Gemini API error:", errorData);
+    throw new Error("Error from Gemini API");
+  }
+
+  const geminiData = await geminiResponse.json();
+  return parseTOCResponse(geminiData);
+}
+
+// Parse the Gemini API response to extract the TOC
+function parseTOCResponse(geminiData: any): any[] {
+  try {
+    const textContent = geminiData.candidates[0].content.parts[0].text;
+    // Extract just the JSON part
+    const jsonMatch = textContent.match(/(\[[\s\S]*\])/);
+    if (jsonMatch && jsonMatch[0]) {
+      return JSON.parse(jsonMatch[0]);
+    } else {
+      return JSON.parse(textContent);
+    }
+  } catch (e) {
+    console.error("Error parsing Gemini response:", e);
+    // Provide a fallback TOC if parsing fails
+    return [
+      {
+        title: "Chapter 1: Introduction",
+        description: "An introduction to the subject's life and background"
+      },
+      {
+        title: "Chapter 2: Early Years",
+        description: "The early years and formative experiences"
+      },
+      {
+        title: "Chapter 3: Adult Life",
+        description: "Major life events and achievements"
+      }
+    ];
+  }
+}
+
+// Save the TOC to the database
+async function saveTOCToDatabase(
+  supabase: any,
+  biographyId: string,
+  tocData: any[]
+): Promise<void> {
+  const { error: tocError } = await supabase
+    .from("biography_toc")
+    .upsert({
+      biography_id: biographyId,
+      structure: tocData,
+      approved: false,
+      updated_at: new Date().toISOString()
+    }, {
+      onConflict: "biography_id"
     });
 
-    if (!geminiResponse.ok) {
-      const errorData = await geminiResponse.json();
-      console.error("Gemini API error:", errorData);
-      return new Response(JSON.stringify({ 
-        error: "Error from Gemini API", 
-        details: errorData 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-    }
+  if (tocError) {
+    console.error("Error saving TOC:", tocError);
+    throw new Error("Failed to save TOC");
+  }
 
-    const geminiData = await geminiResponse.json();
-    console.log("Received response from Gemini API");
+  // Update the biography progress to 'toc'
+  const { error: progressError } = await supabase
+    .from("biographies")
+    .update({
+      progress: "toc",
+      status: "TOCGenerated",
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", biographyId);
+
+  if (progressError) {
+    console.error("Error updating biography progress:", progressError);
+  }
+}
+
+// Main handler for the edge function
+Deno.serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    // Initialize Supabase client
+    const supabase = initSupabaseClient();
     
-    // Extract the TOC from Gemini response
-    let tocData = [];
-    try {
-      const textContent = geminiData.candidates[0].content.parts[0].text;
-      // Extract just the JSON part
-      const jsonMatch = textContent.match(/(\[[\s\S]*\])/);
-      if (jsonMatch && jsonMatch[0]) {
-        tocData = JSON.parse(jsonMatch[0]);
-      } else {
-        tocData = JSON.parse(textContent);
-      }
-      
-      console.log("Successfully parsed TOC data:", tocData.length, "chapters");
-    } catch (e) {
-      console.error("Error parsing Gemini response:", e);
-      // Provide a fallback TOC if parsing fails
-      tocData = [
-        {
-          title: "Chapter 1: Introduction",
-          description: "An introduction to the subject's life and background"
-        },
-        {
-          title: "Chapter 2: Early Years",
-          description: "The early years and formative experiences"
-        },
-        {
-          title: "Chapter 3: Adult Life",
-          description: "Major life events and achievements"
-        }
-      ];
-      console.log("Using fallback TOC data");
-    }
-
-    // Save the TOC data to the database
-    const { error: tocError } = await supabase
-      .from("biography_toc")
-      .upsert({
-        biography_id: biographyId,
-        structure: tocData,
-        approved: false,
-        updated_at: new Date().toISOString()
-      }, {
-        onConflict: "biography_id"
-      });
-
-    if (tocError) {
-      console.error("Error saving TOC:", tocError);
-      return new Response(JSON.stringify({ error: "Failed to save TOC" }), {
-        status: 500,
+    // Validate request and get biography ID
+    const biographyId = await validateRequest(req);
+    console.log("Generating TOC for biography:", biographyId);
+    
+    // Fetch answers and questions
+    const answers = await fetchAnswers(supabase, biographyId);
+    const questionsMap = await fetchQuestions(supabase);
+    
+    // Format question-answer pairs
+    const formattedQA = formatQAPairs(answers, questionsMap);
+    console.log("Found", formattedQA.length, "question-answer pairs with content");
+    
+    // Check if we have any non-empty answers
+    if (formattedQA.length === 0) {
+      return new Response(JSON.stringify({ error: "No non-empty answers found for this biography" }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
-
-    // Update the biography progress to 'toc'
-    const { error: progressError } = await supabase
-      .from("biographies")
-      .update({
-        progress: "toc",
-        status: "TOCGenerated",
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", biographyId);
-
-    if (progressError) {
-      console.error("Error updating biography progress:", progressError);
-    }
-
+    
+    // Generate TOC using Gemini API
+    console.log("Calling Gemini API to generate TOC");
+    const tocData = await generateTOCWithGemini(formattedQA);
+    console.log("Successfully parsed TOC data:", tocData.length, "chapters");
+    
+    // Save TOC to the database
+    await saveTOCToDatabase(supabase, biographyId, tocData);
     console.log("TOC generation completed successfully");
     
     return new Response(JSON.stringify({ success: true, toc: tocData }), {
@@ -239,8 +268,8 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error("Unexpected error:", error);
-    return new Response(JSON.stringify({ error: "An unexpected error occurred" }), {
-      status: 500,
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "An unexpected error occurred" }), {
+      status: error instanceof Error && error.message === "Unauthorized" ? 401 : 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   }
