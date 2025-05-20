@@ -43,6 +43,7 @@ export async function processTOCGeneration(biographyId: string): Promise<TOCChap
   
   // Step 1.5: Verify biography exists
   try {
+    console.log(`[MAIN] Attempting to verify biography exists: ${biographyId}`);
     const exists = await verifyBiographyExists(biographyId);
     if (!exists) {
       console.error(`[MAIN ERROR] Biography not found: ${biographyId}`);
@@ -57,6 +58,7 @@ export async function processTOCGeneration(biographyId: string): Promise<TOCChap
   // Step 2: Fetch all answers
   let answers;
   try {
+    console.log(`[MAIN] Attempting to fetch answers for biography: ${biographyId}`);
     answers = await fetchAnswers(biographyId);
     console.log(`[MAIN] Successfully fetched ${answers.length} answers`);
   } catch (error) {
@@ -71,6 +73,7 @@ export async function processTOCGeneration(biographyId: string): Promise<TOCChap
   // Step 3: Fetch questions
   let questionsMap;
   try {
+    console.log(`[MAIN] Attempting to fetch questions map`);
     questionsMap = await fetchQuestions();
     console.log(`[MAIN] Successfully fetched questions map with ${Object.keys(questionsMap).length} questions`);
   } catch (error) {

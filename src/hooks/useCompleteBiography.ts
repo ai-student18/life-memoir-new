@@ -41,14 +41,31 @@ export const useCompleteBiography = () => {
     setIsCompleting(true);
     
     try {
+      // Get current user session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to complete a biography",
+          variant: "destructive"
+        });
+        return;
+      }
+
       // Verify the biography exists and belongs to the current user
       const { data: biography, error: biographyError } = await supabase
         .from("biographies")
-        .select("id")
+        .select("id, user_id")
         .eq("id", biographyId)
-        .single();
+        .eq("user_id", session.user.id)
+        .maybeSingle();
         
-      if (biographyError || !biography) {
+      if (biographyError) {
+        console.error("Error verifying biography:", biographyError);
+        throw new Error("Error verifying biography access");
+      }
+      
+      if (!biography) {
         throw new Error("Biography not found or you don't have permission to access it");
       }
       
@@ -59,7 +76,8 @@ export const useCompleteBiography = () => {
           status: "QuestionnaireCompleted", 
           updated_at: new Date().toISOString() 
         })
-        .eq("id", biographyId);
+        .eq("id", biographyId)
+        .eq("user_id", session.user.id);
         
       if (error) {
         throw error;

@@ -27,26 +27,33 @@ const BiographyTOC = () => {
           variant: "destructive"
         });
       }
-    }
-  }, [biographyId]);
-
-  const handleRegenerateTOC = async () => {
-    if (biographyId) {
-      try {
-        console.log(`Regenerating TOC for biography: ${biographyId}`);
-        await generateTOC(biographyId);
-      } catch (error) {
-        console.error("Error regenerating TOC:", error);
-        toast({
-          title: "שגיאה",
-          description: "אירעה שגיאה בעת יצירת תוכן העניינים מחדש",
-          variant: "destructive"
-        });
-      }
     } else {
       toast({
         title: "שגיאה",
         description: "מזהה ביוגרפיה חסר",
+        variant: "destructive"
+      });
+    }
+  }, [biographyId]);
+
+  const handleRegenerateTOC = async () => {
+    if (!biographyId) {
+      toast({
+        title: "שגיאה",
+        description: "מזהה ביוגרפיה חסר",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      console.log(`Regenerating TOC for biography: ${biographyId}`);
+      await generateTOC(biographyId);
+    } catch (error) {
+      console.error("Error regenerating TOC:", error);
+      toast({
+        title: "שגיאה",
+        description: "אירעה שגיאה בעת יצירת תוכן העניינים מחדש",
         variant: "destructive"
       });
     }

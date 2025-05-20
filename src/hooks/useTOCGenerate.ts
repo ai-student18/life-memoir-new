@@ -55,10 +55,15 @@ export const useTOCGenerate = () => {
         .select("id, title")
         .eq("id", biographyId)
         .eq("user_id", session.user.id)
-        .single();
+        .maybeSingle();
         
-      if (biographyError || !biography) {
-        console.error("Error verifying biography:", biographyError || "Biography not found");
+      if (biographyError) {
+        console.error("Error verifying biography:", biographyError);
+        throw new Error("שגיאה באימות הביוגרפיה");
+      }
+      
+      if (!biography) {
+        console.error("Biography not found for current user");
         throw new Error("הביוגרפיה אינה קיימת או שאינך מורשה לגשת אליה");
       }
       

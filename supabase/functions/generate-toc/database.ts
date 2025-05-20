@@ -4,9 +4,11 @@ import { TOCChapter } from "./types.ts";
 
 /**
  * Verifies that a biography with the given ID exists
+ * Uses service role client to bypass RLS policies
  */
 export async function verifyBiographyExists(biographyId: string): Promise<boolean> {
-  const supabase = initSupabaseClient();
+  // Use service role client to bypass RLS
+  const supabase = initSupabaseClient(true);
   console.log(`[DB] Verifying biography exists: ${biographyId}`);
   
   try {
@@ -14,7 +16,7 @@ export async function verifyBiographyExists(biographyId: string): Promise<boolea
       .from("biographies")
       .select("id")
       .eq("id", biographyId)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error(`[DB ERROR] Failed to verify biography: ${error.message}`);
@@ -30,9 +32,11 @@ export async function verifyBiographyExists(biographyId: string): Promise<boolea
 
 /**
  * Fetches all answers for a biography regardless of content status
+ * Uses service role client to bypass RLS policies
  */
 export async function fetchAnswers(biographyId: string): Promise<any[]> {
-  const supabase = initSupabaseClient();
+  // Use service role client to bypass RLS
+  const supabase = initSupabaseClient(true);
   console.log(`[DB] Fetching all answers for biography: ${biographyId}`);
   
   try {
@@ -65,7 +69,8 @@ export async function fetchAnswers(biographyId: string): Promise<any[]> {
  * Fetches all questions from the database
  */
 export async function fetchQuestions(): Promise<Record<string, string>> {
-  const supabase = initSupabaseClient();
+  // Use service role client to bypass RLS
+  const supabase = initSupabaseClient(true);
   console.log(`[DB] Fetching all questions`);
   
   try {
@@ -100,12 +105,14 @@ export async function fetchQuestions(): Promise<Record<string, string>> {
 
 /**
  * Saves the TOC to the database for a specific biography
+ * Uses service role client to bypass RLS policies
  */
 export async function saveTOCToDatabase(
   biographyId: string, 
   tocData: TOCChapter[]
 ): Promise<void> {
-  const supabase = initSupabaseClient();
+  // Use service role client to bypass RLS
+  const supabase = initSupabaseClient(true);
   console.log(`[DB] Saving TOC with ${tocData.length} chapters for biography: ${biographyId}`);
   
   try {
