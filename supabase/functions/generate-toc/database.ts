@@ -1,107 +1,100 @@
 
 import { initSupabaseClient } from "../_shared/supabase-client.ts";
-import { QuestionAnswer } from "./types.ts";
+import { TOCChapter } from "./types.ts";
 
-// Fetch answers for a biography with better error handling
+/**
+ * Fetches all answers for a biography regardless of content status
+ */
 export async function fetchAnswers(biographyId: string): Promise<any[]> {
   const supabase = initSupabaseClient();
+  console.log(`[DB] Fetching all answers for biography: ${biographyId}`);
+  
   try {
-    console.log(`Fetching answers for biography: ${biographyId}`);
-    const { data, error, status } = await supabase
+    const { data, error } = await supabase
       .from("biography_answers")
       .select("question_id, answer_text")
       .eq("biography_id", biographyId);
 
     if (error) {
-      console.error(`Database error fetching answers (status ${status}):`, error);
+      console.error(`[DB ERROR] Failed to fetch answers: ${error.message}`);
       throw new Error(`Database error: ${error.message}`);
     }
 
+    // Log the retrieved answers
+    console.log(`[DB] Retrieved ${data?.length || 0} answers for biography ID: ${biographyId}`);
+    
     if (!data || data.length === 0) {
-      console.error("No answers found for this biography");
+      console.log(`[DB] No answers found for biography: ${biographyId}`);
       throw new Error("No answers found for this biography");
     }
     
-    // Debug: Log all answers
-    console.log(`Retrieved ${data.length} total answers for biography ID: ${biographyId}`);
-    data.forEach((answer, index) => {
-      console.log(`Answer ${index + 1}: question_id=${answer.question_id}, content=${answer.answer_text ? 'Has content' : 'Empty'}`);
-    });
-    
-    // Check if we have at least one non-empty answer
-    const answersWithContent = data.filter(answer => answer.answer_text && answer.answer_text.trim() !== "");
-    
-    if (answersWithContent.length === 0) {
-      console.error("No answers with content found for this biography");
-      throw new Error("No answers with content found for this biography");
-    }
-    
-    console.log(`Found ${answersWithContent.length} answers with content for biography ${biographyId} out of ${data.length} total answers`);
     return data;
   } catch (error) {
-    console.error(`Error in fetchAnswers: ${error.message}`);
+    console.error(`[DB ERROR] fetchAnswers: ${error.message}`);
     throw error;
   }
 }
 
-// Fetch questions with better error handling
+/**
+ * Fetches all questions from the database
+ */
 export async function fetchQuestions(): Promise<Record<string, string>> {
   const supabase = initSupabaseClient();
+  console.log(`[DB] Fetching all questions`);
+  
   try {
-    console.log("Fetching questions");
-    const { data, error, status } = await supabase
+    const { data, error } = await supabase
       .from("biography_questions")
       .select("id, question_text");
 
     if (error) {
-      console.error(`Database error fetching questions (status ${status}):`, error);
+      console.error(`[DB ERROR] Failed to fetch questions: ${error.message}`);
       throw new Error(`Database error: ${error.message}`);
     }
 
     if (!data || data.length === 0) {
-      console.error("No questions found in database");
+      console.error(`[DB] No questions found in database`);
       throw new Error("No questions found in database");
     }
 
-    console.log(`Found ${data.length} questions`);
+    console.log(`[DB] Retrieved ${data.length} questions`);
 
-    // Create a map of question IDs to question texts
+    // Map question IDs to question texts
     const questionsMap = data.reduce((acc: Record<string, string>, q: any) => {
       acc[q.id] = q.question_text;
       return acc;
     }, {});
     
-    // Debug: Log the questions map
-    console.log("Questions map created with keys:", Object.keys(questionsMap));
-    
     return questionsMap;
   } catch (error) {
-    console.error(`Error in fetchQuestions: ${error.message}`);
+    console.error(`[DB ERROR] fetchQuestions: ${error.message}`);
     throw error;
   }
 }
 
-// Save the TOC to the database
+/**
+ * Saves the TOC to the database for a specific biography
+ */
 export async function saveTOCToDatabase(
-  biographyId: string,
-  tocData: any[]
+  biographyId: string, 
+  tocData: TOCChapter[]
 ): Promise<void> {
   const supabase = initSupabaseClient();
+  console.log(`[DB] Saving TOC with ${tocData.length} chapters for biography: ${biographyId}`);
+  
   try {
-    console.log(`Saving TOC data (${tocData.length} chapters) for biography ${biographyId}`);
-
-    // Check if TOC already exists
+    // Check if a TOC already exists for this biography
     const { data: existingTOC, error: checkError } = await supabase
       .from("biography_toc")
       .select("id")
       .eq("biography_id", biographyId)
       .single();
     
+    // Determine if we should insert or update
     let saveOperation;
-    
-    if (checkError && checkError.code === 'PGRST116') {
-      // TOC doesn't exist, insert new one
-      console.log("No existing TOC found, creating new entry");
+    if (checkError && checkError.code === "PGRST116") {
+      // No TOC exists, insert a new one
+      console.log(`[DB] Creating new TOC entry for biography: ${biographyId}`);
       saveOperation = supabase
         .from("biography_toc")
         .insert({
@@ -112,7 +105,7 @@ export async function saveTOCToDatabase(
         });
     } else {
       // TOC exists, update it
-      console.log("Existing TOC found, updating");
+      console.log(`[DB] Updating existing TOC for biography: ${biographyId}`);
       saveOperation = supabase
         .from("biography_toc")
         .update({
@@ -123,14 +116,15 @@ export async function saveTOCToDatabase(
         .eq("biography_id", biographyId);
     }
     
-    const { error: tocError } = await saveOperation;
-
-    if (tocError) {
-      console.error("Error saving TOC:", tocError);
-      throw new Error(`Failed to save TOC: ${tocError.message}`);
+    // Execute the save operation
+    const { error: saveError } = await saveOperation;
+    if (saveError) {
+      console.error(`[DB ERROR] Failed to save TOC: ${saveError.message}`);
+      throw new Error(`Failed to save TOC: ${saveError.message}`);
     }
 
-    // Update the biography progress to 'toc'
+    // Update the biography progress status
+    console.log(`[DB] Updating biography status to 'TOCGenerated'`);
     const { error: progressError } = await supabase
       .from("biographies")
       .update({
@@ -141,14 +135,13 @@ export async function saveTOCToDatabase(
       .eq("id", biographyId);
 
     if (progressError) {
-      console.error("Error updating biography progress:", progressError);
+      console.warn(`[DB WARNING] Failed to update biography progress: ${progressError.message}`);
       // Don't throw here, as the TOC is already saved
-      console.warn(`Warning: Failed to update biography progress: ${progressError.message}`);
     }
     
-    console.log("TOC saved successfully and biography progress updated");
+    console.log(`[DB] TOC saved successfully for biography: ${biographyId}`);
   } catch (error) {
-    console.error(`Error in saveTOCToDatabase: ${error.message}`);
+    console.error(`[DB ERROR] saveTOCToDatabase: ${error.message}`);
     throw error;
   }
 }
