@@ -13,6 +13,20 @@ const BiographyDraft = () => {
   const navigate = useNavigate();
   const { data: biography, isLoading, error } = useBiography(biographyId);
 
+  // Ensure biographyId is defined before using it
+  if (!biographyId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white p-4">
+        <ErrorDisplay 
+          title="Missing biography ID" 
+          message="No biography ID provided." 
+          onRetry={() => navigate('/dashboard')}
+          variant="full"
+        />
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">

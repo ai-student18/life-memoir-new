@@ -3,10 +3,11 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Refresh, FileText, Save } from "lucide-react";
+import { RefreshCw, FileText, Save } from "lucide-react";
 import { useBiographyDraft } from "@/hooks/useBiographyDraft";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { BiographyDraft } from "@/types/biography";
 
 interface DraftViewerProps {
   biographyId: string;
@@ -21,7 +22,7 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
     if (!draft?.chapter_content || !onUpdateChapter) return;
     
     // Get the chapter content by title
-    const chapterContent = draft.chapter_content[chapterTitle];
+    const chapterContent = draft.chapter_content[chapterTitle] as string | undefined;
     if (!chapterContent) return;
     
     // Find the index in structure or if that's not available, try to parse from title
@@ -87,7 +88,9 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="prose max-w-none">
-                <div className="whitespace-pre-wrap">{draft?.chapter_content[title]}</div>
+                <div className="whitespace-pre-wrap">
+                  {draft?.chapter_content[title] as string}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -131,7 +134,7 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
             </>
           ) : draft ? (
             <>
-              <Refresh className="mr-2 h-4 w-4" />
+              <RefreshCw className="mr-2 h-4 w-4" />
               Regenerate Draft
             </>
           ) : (

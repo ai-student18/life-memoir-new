@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Save, Check, Sparkles } from "lucide-react";
 import { useAutoSave } from "@/hooks/useAutoSave";
-import { useBiographyDraft } from "@/hooks/useBiographyDraft";
 import {
   Dialog,
   DialogContent,
@@ -68,7 +67,7 @@ const ChapterEditor = ({ chapter, onSave }: ChapterEditorProps) => {
   });
 
   // Handle updating content from draft
-  const handleUpdateFromDraft = (chapterIndex: number, draftContent: string) => {
+  const handleUpdateFromDraft = (_chapterIndex: number, draftContent: string) => {
     setContent(draftContent);
     setEditedChapter(prev => ({ ...prev, content: draftContent }));
     setDraftDialogOpen(false);
