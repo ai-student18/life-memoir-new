@@ -1,5 +1,6 @@
 
 import { initSupabaseClient } from "../_shared/supabase-client.ts";
+import { QuestionAnswer } from "./types.ts";
 
 // Fetch answers for a biography with better error handling
 export async function fetchAnswers(biographyId: string): Promise<any[]> {
@@ -16,11 +17,17 @@ export async function fetchAnswers(biographyId: string): Promise<any[]> {
       throw new Error(`Database error: ${error.message}`);
     }
 
-    if (!data) {
-      console.error("No data returned when fetching answers");
-      throw new Error("No data returned when fetching answers");
+    if (!data || data.length === 0) {
+      console.error("No answers found for this biography");
+      throw new Error("No answers found for this biography");
     }
-
+    
+    // Debug: Log all answers
+    console.log(`Retrieved ${data.length} total answers for biography ID: ${biographyId}`);
+    data.forEach((answer, index) => {
+      console.log(`Answer ${index + 1}: question_id=${answer.question_id}, content=${answer.answer_text ? 'Has content' : 'Empty'}`);
+    });
+    
     // Check if we have at least one non-empty answer
     const answersWithContent = data.filter(answer => answer.answer_text && answer.answer_text.trim() !== "");
     
@@ -59,10 +66,15 @@ export async function fetchQuestions(): Promise<Record<string, string>> {
     console.log(`Found ${data.length} questions`);
 
     // Create a map of question IDs to question texts
-    return data.reduce((acc: Record<string, string>, q: any) => {
+    const questionsMap = data.reduce((acc: Record<string, string>, q: any) => {
       acc[q.id] = q.question_text;
       return acc;
     }, {});
+    
+    // Debug: Log the questions map
+    console.log("Questions map created with keys:", Object.keys(questionsMap));
+    
+    return questionsMap;
   } catch (error) {
     console.error(`Error in fetchQuestions: ${error.message}`);
     throw error;
@@ -89,6 +101,7 @@ export async function saveTOCToDatabase(
     
     if (checkError && checkError.code === 'PGRST116') {
       // TOC doesn't exist, insert new one
+      console.log("No existing TOC found, creating new entry");
       saveOperation = supabase
         .from("biography_toc")
         .insert({
@@ -99,6 +112,7 @@ export async function saveTOCToDatabase(
         });
     } else {
       // TOC exists, update it
+      console.log("Existing TOC found, updating");
       saveOperation = supabase
         .from("biography_toc")
         .update({

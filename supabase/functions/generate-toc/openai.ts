@@ -15,18 +15,30 @@ export function createSystemPrompt(): string {
   - Format as: [{"title": "Chapter Title", "description": "Brief description"}]`;
 }
 
-// Format the question-answer pairs
+// Format the question-answer pairs - improved filtering logic
 export function formatQAPairs(
   answers: any[],
   questionsMap: Record<string, string>
 ): QuestionAnswer[] {
   try {
-    const formatted = answers
-      .map(answer => ({
-        question: questionsMap[answer.question_id] || "Unknown question",
+    console.log(`Formatting ${answers.length} answers with questions map`);
+    
+    // Filter answers that have content first
+    const answersWithContent = answers.filter(answer => 
+      answer.answer_text && answer.answer_text.trim() !== ""
+    );
+    
+    console.log(`After filtering, ${answersWithContent.length} answers have content`);
+    
+    // Map to question-answer format
+    const formatted = answersWithContent.map(answer => {
+      const questionText = questionsMap[answer.question_id] || "Unknown question";
+      console.log(`Mapping question ID ${answer.question_id} to "${questionText.substring(0, 30)}..."`);
+      return {
+        question: questionText,
         answer: answer.answer_text || ""
-      }))
-      .filter(qa => qa.answer.trim() !== "");
+      };
+    });
     
     console.log(`Formatted ${formatted.length} QA pairs with content`);
     return formatted;
@@ -57,6 +69,7 @@ export async function generateTOCWithOpenAI(formattedQA: QuestionAnswer[]): Prom
 
       console.log(`Calling OpenAI API (attempt ${retries + 1}/${MAX_RETRIES + 1})...`);
       console.log(`Using ${formattedQA.length} QA pairs as context`);
+      console.log(`Sample QA: ${JSON.stringify(formattedQA[0])}`);
 
       const openAIResponse = await fetch(
         "https://api.openai.com/v1/chat/completions",
