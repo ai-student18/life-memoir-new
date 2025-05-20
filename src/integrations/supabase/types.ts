@@ -116,6 +116,44 @@ export type Database = {
           },
         ]
       }
+      biography_drafts: {
+        Row: {
+          biography_id: string
+          chapter_content: Json
+          created_at: string
+          full_content: string
+          id: string
+          is_ai_generated: boolean
+          updated_at: string
+        }
+        Insert: {
+          biography_id: string
+          chapter_content?: Json
+          created_at?: string
+          full_content: string
+          id?: string
+          is_ai_generated?: boolean
+          updated_at?: string
+        }
+        Update: {
+          biography_id?: string
+          chapter_content?: Json
+          created_at?: string
+          full_content?: string
+          id?: string
+          is_ai_generated?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "biography_drafts_biography_id_fkey"
+            columns: ["biography_id"]
+            isOneToOne: false
+            referencedRelation: "biographies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       biography_questions: {
         Row: {
           created_at: string
@@ -215,7 +253,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_biography_owner: {
+        Args: { biography_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

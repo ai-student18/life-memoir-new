@@ -7,6 +7,7 @@ export enum BiographyStatus {
   QuestionnaireCompleted = "QuestionnaireCompleted",
   TOCGenerated = "TOCGenerated",
   TOCApproved = "TOCApproved",
+  DraftGenerated = "DraftGenerated",
   InProgress = "InProgress",
   Completed = "Completed"
 }
@@ -17,6 +18,7 @@ export enum BiographyStatus {
 export enum BiographyProgress {
   Questionnaire = "questionnaire",
   TOC = "toc",
+  Draft = "draft",
   Editor = "editor",
   Export = "export"
 }
@@ -63,6 +65,19 @@ export interface TOCData {
   biography_id: string;
   structure: TOCChapter[];
   approved: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Biography draft data structure
+ */
+export interface BiographyDraft {
+  id: string;
+  biography_id: string;
+  full_content: string;
+  chapter_content: Record<string, string>;
+  is_ai_generated: boolean;
   created_at: string;
   updated_at: string;
 }

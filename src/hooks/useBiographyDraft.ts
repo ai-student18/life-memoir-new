@@ -1,0 +1,89 @@
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import { useState } from "react";
+
+/**
+ * Hook for managing biography draft generation and retrieval
+ */
+export const useBiographyDraft = (biographyId?: string) => {
+  const [isGenerating, setIsGenerating] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Query to get draft info
+  const draftQuery = useQuery({
+    queryKey: ["biography-draft", biographyId],
+    queryFn: async () => {
+      if (!biographyId) throw new Error("Biography ID is required");
+
+      const { data, error } = await supabase
+        .from("biography_drafts")
+        .select("*")
+        .eq("biography_id", biographyId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!biographyId,
+    retry: 1,
+  });
+
+  // Mutation to generate a new draft
+  const generateDraftMutation = useMutation({
+    mutationFn: async (id: string) => {
+      setIsGenerating(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("generate-biography-draft", {
+          body: { biographyId: id }
+        });
+
+        if (error) throw error;
+        return data;
+      } finally {
+        setIsGenerating(false);
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "Draft Generated",
+        description: "Your biography draft was generated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["biography-draft", biographyId] });
+      queryClient.invalidateQueries({ queryKey: ["biography", biographyId] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to generate draft: ${error?.message || "Unknown error"}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Function to generate a new draft
+  const generateDraft = async () => {
+    if (!biographyId) {
+      toast({
+        title: "Error",
+        description: "Biography ID is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    return generateDraftMutation.mutateAsync(biographyId);
+  };
+
+  return {
+    draft: draftQuery.data,
+    isLoading: draftQuery.isLoading,
+    error: draftQuery.error,
+    generateDraft,
+    isGenerating,
+    refetchDraft: () => queryClient.invalidateQueries({ queryKey: ["biography-draft", biographyId] }),
+  };
+};

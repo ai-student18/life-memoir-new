@@ -5,8 +5,18 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Save, Check } from "lucide-react";
+import { Save, Check, Sparkles } from "lucide-react";
 import { useAutoSave } from "@/hooks/useAutoSave";
+import { useBiographyDraft } from "@/hooks/useBiographyDraft";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import DraftViewer from "./DraftViewer";
 
 interface ChapterEditorProps {
   chapter: Chapter;
@@ -21,6 +31,7 @@ const ChapterEditor = ({ chapter, onSave }: ChapterEditorProps) => {
     title: chapter.title,
     content: chapter.content || "",
   });
+  const [draftDialogOpen, setDraftDialogOpen] = useState(false);
 
   // Update local state when chapter prop changes (e.g., when switching chapters)
   useEffect(() => {
@@ -56,6 +67,13 @@ const ChapterEditor = ({ chapter, onSave }: ChapterEditorProps) => {
     saveDelay: 3000,
   });
 
+  // Handle updating content from draft
+  const handleUpdateFromDraft = (chapterIndex: number, draftContent: string) => {
+    setContent(draftContent);
+    setEditedChapter(prev => ({ ...prev, content: draftContent }));
+    setDraftDialogOpen(false);
+  };
+
   return (
     <Card className="w-full">
       <CardHeader className="pb-2">
@@ -88,7 +106,30 @@ const ChapterEditor = ({ chapter, onSave }: ChapterEditorProps) => {
           placeholder="Start writing your chapter content here..."
         />
       </CardContent>
-      <CardFooter className="flex justify-end">
+      <CardFooter className="flex justify-between">
+        <Dialog open={draftDialogOpen} onOpenChange={setDraftDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline">
+              <Sparkles className="mr-2 h-4 w-4" />
+              Use AI Draft
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl h-[80vh]">
+            <DialogHeader>
+              <DialogTitle>Biography Draft</DialogTitle>
+              <DialogDescription>
+                Select content from the AI-generated draft to use in this chapter
+              </DialogDescription>
+            </DialogHeader>
+            <div className="overflow-y-auto flex-grow">
+              <DraftViewer 
+                biographyId={chapter.biography_id} 
+                onUpdateChapter={handleUpdateFromDraft} 
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+        
         <Button
           onClick={forceSave}
           disabled={isSaving || !hasUnsavedChanges}
