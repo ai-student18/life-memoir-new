@@ -14,7 +14,7 @@ import { Answer } from "@/types/questionnaire";
 import { useTOCGenerate } from "@/hooks/useTOCGenerate";
 import { Button } from "@/components/ui/button";
 import { BookText } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useGeminiApiKey } from "@/hooks/useGeminiApiKey";
 import { ErrorDisplay } from "@/components/ui/error-display";
@@ -26,7 +26,7 @@ const BiographyQuestionnaire = () => {
   const [generationError, setGenerationError] = useState<string | null>(null);
   
   // Custom hooks to fetch and manage data
-  const { data: biography, isLoading: biographyLoading } = useBiography(biographyId);
+  const { data: biography, isLoading: biographyLoading, error: biographyError } = useBiography(biographyId);
   const { data: questions, isLoading: questionsLoading } = useQuestions();
   const { answers, answeredCount, isLoading: answersLoading, saveAnswer } = useQuestionnaireAnswers(biographyId);
   const { completeBiography } = useCompleteBiography();
@@ -39,6 +39,17 @@ const BiographyQuestionnaire = () => {
   // Check if there's at least one answer with content
   const hasAnswerWithContent = Object.values(answers).some(answer => answer.answer_text?.trim());
   
+  // Validate biographyId format
+  useEffect(() => {
+    if (biographyId && !biographyLoading && !biographyError && !biography) {
+      toast({
+        title: "שגיאה",
+        description: "הביוגרפיה המבוקשת לא נמצאה",
+        variant: "destructive"
+      });
+    }
+  }, [biographyId, biography, biographyLoading, biographyError]);
+
   // Show loading state while data is being fetched
   if (isLoading) {
     return <QuestionnaireLoading />;
@@ -57,15 +68,31 @@ const BiographyQuestionnaire = () => {
   // Function to handle completing the questionnaire
   const handleComplete = async () => {
     if (biographyId) {
-      await completeBiography(biographyId);
+      try {
+        await completeBiography(biographyId);
+      } catch (error) {
+        console.error("Error completing biography:", error);
+        toast({
+          title: "שגיאה",
+          description: "אירעה שגיאה בעת השלמת השאלון",
+          variant: "destructive"
+        });
+      }
     }
   };
 
   // Function to handle generating TOC
   const handleGenerateTOC = async () => {
-    if (!biographyId) return;
-    
-    setGenerationError(null);
+    if (!biographyId) {
+      const errorMsg = "מזהה ביוגרפיה חסר";
+      setGenerationError(errorMsg);
+      toast({
+        title: "שגיאה",
+        description: errorMsg,
+        variant: "destructive"
+      });
+      return;
+    }
     
     // Check if we have any answers with content
     if (!hasAnswerWithContent) {
@@ -91,7 +118,10 @@ const BiographyQuestionnaire = () => {
     }
     
     setIsGeneratingTOC(true);
+    setGenerationError(null);
+    
     try {
+      console.log(`Generating TOC for biography: ${biographyId}`);
       await generateTOC(biographyId);
     } catch (error) {
       if (error instanceof Error) {

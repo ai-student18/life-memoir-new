@@ -23,6 +23,17 @@ export const useTOCGenerate = () => {
       return;
     }
 
+    // Validate biography ID format before sending to edge function
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(biographyId)) {
+      toast({
+        title: "שגיאה",
+        description: "מזהה הביוגרפיה אינו בפורמט תקין",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsGenerating(true);
     setError(null);
 
@@ -36,6 +47,22 @@ export const useTOCGenerate = () => {
         });
         return;
       }
+
+      // First verify that the biography exists and belongs to the current user
+      console.log(`Verifying biography ID: ${biographyId}`);
+      const { data: biography, error: biographyError } = await supabase
+        .from("biographies")
+        .select("id, title")
+        .eq("id", biographyId)
+        .eq("user_id", session.user.id)
+        .single();
+        
+      if (biographyError || !biography) {
+        console.error("Error verifying biography:", biographyError || "Biography not found");
+        throw new Error("הביוגרפיה אינה קיימת או שאינך מורשה לגשת אליה");
+      }
+      
+      console.log(`Found biography: ${biography.title} (${biography.id})`);
 
       // Check if there are any answers for this biography
       const { data: answers, error: answersError } = await supabase

@@ -8,15 +8,47 @@ import { useTOCGenerate } from "@/hooks/useTOCGenerate";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { ErrorDisplay } from "@/components/ui/error-display";
+import { useEffect } from "react";
+import { toast } from "@/hooks/use-toast";
 
 const BiographyTOC = () => {
   const { biographyId } = useParams<{ biographyId: string }>();
   const { data: biography, isLoading: biographyLoading, error: biographyError } = useBiography(biographyId);
   const { generateTOC, isGenerating } = useTOCGenerate();
 
+  // Validate biographyId format
+  useEffect(() => {
+    if (biographyId) {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(biographyId)) {
+        toast({
+          title: "שגיאה",
+          description: "מזהה הביוגרפיה אינו בפורמט תקין",
+          variant: "destructive"
+        });
+      }
+    }
+  }, [biographyId]);
+
   const handleRegenerateTOC = async () => {
     if (biographyId) {
-      await generateTOC(biographyId);
+      try {
+        console.log(`Regenerating TOC for biography: ${biographyId}`);
+        await generateTOC(biographyId);
+      } catch (error) {
+        console.error("Error regenerating TOC:", error);
+        toast({
+          title: "שגיאה",
+          description: "אירעה שגיאה בעת יצירת תוכן העניינים מחדש",
+          variant: "destructive"
+        });
+      }
+    } else {
+      toast({
+        title: "שגיאה",
+        description: "מזהה ביוגרפיה חסר",
+        variant: "destructive"
+      });
     }
   };
 
@@ -24,7 +56,7 @@ const BiographyTOC = () => {
     return <TOCLoading />;
   }
   
-  if (biographyError) {
+  if (biographyError || !biography) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white p-4">
         <ErrorDisplay 

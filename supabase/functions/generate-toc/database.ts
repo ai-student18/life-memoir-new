@@ -3,6 +3,32 @@ import { initSupabaseClient } from "../_shared/supabase-client.ts";
 import { TOCChapter } from "./types.ts";
 
 /**
+ * Verifies that a biography with the given ID exists
+ */
+export async function verifyBiographyExists(biographyId: string): Promise<boolean> {
+  const supabase = initSupabaseClient();
+  console.log(`[DB] Verifying biography exists: ${biographyId}`);
+  
+  try {
+    const { data, error } = await supabase
+      .from("biographies")
+      .select("id")
+      .eq("id", biographyId)
+      .single();
+
+    if (error) {
+      console.error(`[DB ERROR] Failed to verify biography: ${error.message}`);
+      return false;
+    }
+
+    return data !== null;
+  } catch (error) {
+    console.error(`[DB ERROR] verifyBiographyExists: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
  * Fetches all answers for a biography regardless of content status
  */
 export async function fetchAnswers(biographyId: string): Promise<any[]> {

@@ -27,9 +27,31 @@ export const useCompleteBiography = () => {
       return;
     }
     
+    // Validate biography ID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(biographyId)) {
+      toast({
+        title: "Error",
+        description: "Invalid biography ID format",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsCompleting(true);
     
     try {
+      // Verify the biography exists and belongs to the current user
+      const { data: biography, error: biographyError } = await supabase
+        .from("biographies")
+        .select("id")
+        .eq("id", biographyId)
+        .single();
+        
+      if (biographyError || !biography) {
+        throw new Error("Biography not found or you don't have permission to access it");
+      }
+      
       // Update biography status to indicate questionnaire completion
       const { error } = await supabase
         .from("biographies")
@@ -52,6 +74,7 @@ export const useCompleteBiography = () => {
       // Generate TOC or navigate to dashboard
       if (generateToc) {
         try {
+          console.log(`Generating TOC for biography: ${biographyId}`);
           const { error } = await supabase.functions.invoke("generate-toc", {
             body: { biographyId }
           });

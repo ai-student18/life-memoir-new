@@ -1,7 +1,7 @@
 
 import { corsHeaders } from "../_shared/cors.ts";
 import { RequestBody, APIResponse, TOCChapter } from "./types.ts";
-import { fetchAnswers, fetchQuestions, saveTOCToDatabase } from "./database.ts";
+import { fetchAnswers, fetchQuestions, saveTOCToDatabase, verifyBiographyExists } from "./database.ts";
 import { formatQAPairs, generateTOCWithOpenAI } from "./openai.ts";
 
 /**
@@ -14,6 +14,13 @@ export async function extractBiographyId(req: Request): Promise<string> {
     if (!body || !body.biographyId) {
       console.error("[MAIN ERROR] Missing biographyId in request");
       throw new Error("Biography ID is required");
+    }
+    
+    // Basic validation of UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(body.biographyId)) {
+      console.error(`[MAIN ERROR] Invalid UUID format: ${body.biographyId}`);
+      throw new Error("Invalid biography ID format");
     }
     
     return body.biographyId;
@@ -32,6 +39,19 @@ export async function processTOCGeneration(biographyId: string): Promise<TOCChap
   if (!OPENAI_API_KEY) {
     console.error("[MAIN ERROR] OpenAI API key not configured");
     throw new Error("OpenAI API key is not configured");
+  }
+  
+  // Step 1.5: Verify biography exists
+  try {
+    const exists = await verifyBiographyExists(biographyId);
+    if (!exists) {
+      console.error(`[MAIN ERROR] Biography not found: ${biographyId}`);
+      throw new Error(`Biography with ID ${biographyId} not found`);
+    }
+    console.log(`[MAIN] Successfully verified biography exists: ${biographyId}`);
+  } catch (error) {
+    console.error(`[MAIN ERROR] Failed to verify biography: ${error.message}`);
+    throw new Error(`Error verifying biography: ${error.message}`);
   }
   
   // Step 2: Fetch all answers
