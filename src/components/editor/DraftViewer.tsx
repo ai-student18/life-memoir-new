@@ -7,7 +7,6 @@ import { RefreshCw, FileText, Save } from "lucide-react";
 import { useBiographyDraft } from "@/hooks/useBiographyDraft";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { BiographyDraft } from "@/types/biography";
 
 interface DraftViewerProps {
   biographyId: string;
@@ -22,8 +21,10 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
     if (!draft?.chapter_content || !onUpdateChapter) return;
     
     // Get the chapter content by title
-    const chapterContent = draft.chapter_content[chapterTitle] as string | undefined;
-    if (!chapterContent) return;
+    const chapterContent = draft.chapter_content[chapterTitle];
+    
+    // Make sure the content is a string
+    if (typeof chapterContent !== 'string') return;
     
     // Find the index in structure or if that's not available, try to parse from title
     let chapterIndex = -1;
@@ -69,32 +70,38 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
           </Card>
         </TabsContent>
 
-        {chapters.map((title) => (
-          <TabsContent key={title} value={title} className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex justify-between items-center">
-                  <span>{title}</span>
-                  {onUpdateChapter && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleUpdateFromDraft(title)}
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      Use in Editor
-                    </Button>
-                  )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="prose max-w-none">
-                <div className="whitespace-pre-wrap">
-                  {draft?.chapter_content[title] as string}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        ))}
+        {chapters.map((title) => {
+          // Ensure we only access chapter content if it exists and properly check its type
+          const chapterContent = draft?.chapter_content?.[title];
+          const contentToDisplay = typeof chapterContent === 'string' ? chapterContent : '';
+          
+          return (
+            <TabsContent key={title} value={title} className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex justify-between items-center">
+                    <span>{title}</span>
+                    {onUpdateChapter && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleUpdateFromDraft(title)}
+                      >
+                        <Save className="h-4 w-4 mr-2" />
+                        Use in Editor
+                      </Button>
+                    )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="prose max-w-none">
+                  <div className="whitespace-pre-wrap">
+                    {contentToDisplay}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          );
+        })}
       </Tabs>
     );
   };
