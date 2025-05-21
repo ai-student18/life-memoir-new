@@ -1,6 +1,5 @@
 
 import { useState } from "react";
-import { isStringRecord } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -21,11 +20,10 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
   const handleUpdateFromDraft = (chapterTitle: string) => {
     if (!draft?.chapter_content || !onUpdateChapter) return;
     
-    // Ensure chapter_content is a valid object with string values
-    if (!isStringRecord(draft.chapter_content)) return;
-    
     // Get the chapter content by title
     const chapterContent = draft.chapter_content[chapterTitle];
+    
+    // Make sure the content is a string
     if (typeof chapterContent !== 'string') return;
     
     // Find the index in structure or if that's not available, try to parse from title
@@ -41,19 +39,7 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
   };
 
   const renderChapterTabs = () => {
-    if (!draft) return null;
-
-    // Ensure chapter_content is a record with string values
-    if (!isStringRecord(draft.chapter_content)) {
-      return (
-        <Alert variant="destructive">
-          <AlertTitle>Invalid data format</AlertTitle>
-          <AlertDescription>
-            The chapter content data is not in the expected format.
-          </AlertDescription>
-        </Alert>
-      );
-    }
+    if (!draft?.chapter_content) return null;
 
     const chapters = Object.keys(draft.chapter_content);
     return (
@@ -79,13 +65,16 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
               </CardTitle>
             </CardHeader>
             <CardContent className="prose max-w-none">
-              <div className="whitespace-pre-wrap">{draft.full_content}</div>
+              <div className="whitespace-pre-wrap">{draft?.full_content}</div>
             </CardContent>
           </Card>
         </TabsContent>
 
         {chapters.map((title) => {
-          const chapterContent = draft.chapter_content[title];
+          // Ensure we only access chapter content if it exists and properly check its type
+          const chapterContent = draft?.chapter_content?.[title];
+          const contentToDisplay = typeof chapterContent === 'string' ? chapterContent : '';
+          
           return (
             <TabsContent key={title} value={title} className="mt-4">
               <Card>
@@ -106,7 +95,7 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
                 </CardHeader>
                 <CardContent className="prose max-w-none">
                   <div className="whitespace-pre-wrap">
-                    {chapterContent}
+                    {contentToDisplay}
                   </div>
                 </CardContent>
               </Card>

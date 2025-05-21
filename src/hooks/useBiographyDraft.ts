@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { transformDraftData } from "@/lib/validation";
 
 /**
  * Hook for managing biography draft generation and retrieval
@@ -27,14 +26,7 @@ export const useBiographyDraft = (biographyId?: string) => {
         .maybeSingle();
 
       if (error) throw error;
-      
-      // Validate and transform the data
-      const validatedData = transformDraftData(data);
-      if (!validatedData) {
-        throw new Error("Invalid draft data received from server");
-      }
-      
-      return validatedData;
+      return data;
     },
     enabled: !!biographyId,
     retry: 1,
@@ -50,14 +42,7 @@ export const useBiographyDraft = (biographyId?: string) => {
         });
 
         if (error) throw error;
-        
-        // Validate the generated draft data
-        const validatedData = transformDraftData(data);
-        if (!validatedData) {
-          throw new Error("Invalid draft data received from generation");
-        }
-        
-        return validatedData;
+        return data;
       } finally {
         setIsGenerating(false);
       }
