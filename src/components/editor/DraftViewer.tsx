@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { isStringRecord } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -19,10 +20,11 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
 
   const handleUpdateFromDraft = (chapterTitle: string) => {
     if (!draft?.chapter_content || !onUpdateChapter) return;
-    
+    if (!isStringRecord(draft.chapter_content)) return;
+
     // Get the chapter content by title
     const chapterContent = draft.chapter_content[chapterTitle];
-    
+
     // Make sure the content is a string
     if (typeof chapterContent !== 'string') return;
     
@@ -40,6 +42,17 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
 
   const renderChapterTabs = () => {
     if (!draft?.chapter_content) return null;
+    if (!isStringRecord(draft.chapter_content)) {
+      // Fallback UI if chapter_content is not a valid string record
+      return (
+        <Alert variant="destructive" className="mb-4">
+          <AlertTitle>Invalid Draft Data</AlertTitle>
+          <AlertDescription>
+            The draft data is in an unexpected format. Please try regenerating your draft or contact support if the issue persists.
+          </AlertDescription>
+        </Alert>
+      );
+    }
 
     const chapters = Object.keys(draft.chapter_content);
     return (
@@ -71,8 +84,8 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
         </TabsContent>
 
         {chapters.map((title) => {
-          // Ensure we only access chapter content if it exists and properly check its type
-          const chapterContent = draft?.chapter_content?.[title];
+          // Safe to access chapter content after type guard
+          const chapterContent = draft.chapter_content[title];
           const contentToDisplay = typeof chapterContent === 'string' ? chapterContent : '';
           
           return (
