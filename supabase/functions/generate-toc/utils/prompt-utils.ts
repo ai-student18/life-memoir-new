@@ -16,7 +16,7 @@ The person has answered questions about their life, and you need to organize the
 Return ONLY a JSON array of chapters, with each chapter having a 'title' and 'description' field.
 
 Follow these guidelines:
-- Create a few chapters that flow chronologically or thematically
+- Create 5-10 chapters that flow chronologically or thematically
 - Make chapter titles descriptive and engaging
 - Include brief descriptions (1-2 sentences) that summarize what each chapter will cover
 - Ensure chapters collectively tell a cohesive life story
