@@ -4,11 +4,10 @@ import { isStringRecord } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { FileText, Save, RefreshCw } from "lucide-react";
+import { RefreshCw, FileText, Save } from "lucide-react";
 import { useBiographyDraft } from "@/hooks/useBiographyDraft";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { toast } from "@/hooks/use-toast";
 
 interface DraftViewerProps {
   biographyId: string;
@@ -17,38 +16,17 @@ interface DraftViewerProps {
 
 const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
   const [activeTab, setActiveTab] = useState("full");
-  const { draft, isLoading, error, generateDraft, isGenerating, refetchDraft } = useBiographyDraft(biographyId);
+  const { draft, isLoading, error, generateDraft, isGenerating } = useBiographyDraft(biographyId);
 
   const handleUpdateFromDraft = (chapterTitle: string) => {
-    if (!draft?.chapter_content || !onUpdateChapter) {
-      toast({
-        title: "Error",
-        description: "Cannot apply draft content - editor not ready",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!draft?.chapter_content || !onUpdateChapter) return;
     
     // Ensure chapter_content is a valid object with string values
-    if (!isStringRecord(draft.chapter_content)) {
-      toast({
-        title: "Error",
-        description: "Invalid chapter content format",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!isStringRecord(draft.chapter_content)) return;
     
     // Get the chapter content by title
     const chapterContent = draft.chapter_content[chapterTitle];
-    if (typeof chapterContent !== 'string') {
-      toast({
-        title: "Error", 
-        description: "Chapter content not found",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (typeof chapterContent !== 'string') return;
     
     // Find the index in structure or if that's not available, try to parse from title
     let chapterIndex = -1;
@@ -59,25 +37,7 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
 
     if (chapterIndex >= 0) {
       onUpdateChapter(chapterIndex, chapterContent);
-      toast({
-        title: "Success", 
-        description: "Draft content applied to chapter",
-      });
-    } else {
-      toast({
-        title: "Error", 
-        description: "Could not determine chapter index",
-        variant: "destructive",
-      });
     }
-  };
-
-  const handleExport = () => {
-    // This would be implemented with an Edge Function
-    toast({
-      title: "Export Started",
-      description: "Your complete biography draft is being prepared for download.",
-    });
   };
 
   const renderChapterTabs = () => {
@@ -112,7 +72,7 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
                 <span>Full Biography Draft</span>
-                <Button onClick={handleExport} variant="outline" size="sm">
+                <Button variant="outline" size="sm">
                   <FileText className="h-4 w-4 mr-2" />
                   Export
                 </Button>
