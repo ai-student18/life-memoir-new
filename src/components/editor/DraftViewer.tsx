@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { isStringRecord } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +7,7 @@ import { RefreshCw, FileText, Save } from "lucide-react";
 import { useBiographyDraft } from "@/hooks/useBiographyDraft";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { BiographyDraft } from "@/types/biography";
 
 interface DraftViewerProps {
   biographyId: string;
@@ -20,12 +20,9 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
 
   const handleUpdateFromDraft = (chapterTitle: string) => {
     if (!draft?.chapter_content || !onUpdateChapter) return;
-    if (!isStringRecord(draft.chapter_content)) return;
-
+    
     // Get the chapter content by title
     const chapterContent = draft.chapter_content[chapterTitle];
-
-    // Make sure the content is a string
     if (typeof chapterContent !== 'string') return;
     
     // Find the index in structure or if that's not available, try to parse from title
@@ -41,18 +38,7 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
   };
 
   const renderChapterTabs = () => {
-    if (!draft?.chapter_content) return null;
-    if (!isStringRecord(draft.chapter_content)) {
-      // Fallback UI if chapter_content is not a valid string record
-      return (
-        <Alert variant="destructive" className="mb-4">
-          <AlertTitle>Invalid Draft Data</AlertTitle>
-          <AlertDescription>
-            The draft data is in an unexpected format. Please try regenerating your draft or contact support if the issue persists.
-          </AlertDescription>
-        </Alert>
-      );
-    }
+    if (!draft) return null;
 
     const chapters = Object.keys(draft.chapter_content);
     return (
@@ -78,16 +64,13 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
               </CardTitle>
             </CardHeader>
             <CardContent className="prose max-w-none">
-              <div className="whitespace-pre-wrap">{draft?.full_content}</div>
+              <div className="whitespace-pre-wrap">{draft.full_content}</div>
             </CardContent>
           </Card>
         </TabsContent>
 
         {chapters.map((title) => {
-          // Safe to access chapter content after type guard
           const chapterContent = draft.chapter_content[title];
-          const contentToDisplay = typeof chapterContent === 'string' ? chapterContent : '';
-          
           return (
             <TabsContent key={title} value={title} className="mt-4">
               <Card>
@@ -108,7 +91,7 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
                 </CardHeader>
                 <CardContent className="prose max-w-none">
                   <div className="whitespace-pre-wrap">
-                    {contentToDisplay}
+                    {chapterContent}
                   </div>
                 </CardContent>
               </Card>
