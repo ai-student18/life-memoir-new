@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { isStringRecord } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +8,6 @@ import { RefreshCw, FileText, Save } from "lucide-react";
 import { useBiographyDraft } from "@/hooks/useBiographyDraft";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { BiographyDraft } from "@/types/biography";
 
 interface DraftViewerProps {
   biographyId: string;
@@ -20,6 +20,9 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
 
   const handleUpdateFromDraft = (chapterTitle: string) => {
     if (!draft?.chapter_content || !onUpdateChapter) return;
+    
+    // Ensure chapter_content is a valid object with string values
+    if (!isStringRecord(draft.chapter_content)) return;
     
     // Get the chapter content by title
     const chapterContent = draft.chapter_content[chapterTitle];
@@ -39,6 +42,18 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
 
   const renderChapterTabs = () => {
     if (!draft) return null;
+
+    // Ensure chapter_content is a record with string values
+    if (!isStringRecord(draft.chapter_content)) {
+      return (
+        <Alert variant="destructive">
+          <AlertTitle>Invalid data format</AlertTitle>
+          <AlertDescription>
+            The chapter content data is not in the expected format.
+          </AlertDescription>
+        </Alert>
+      );
+    }
 
     const chapters = Object.keys(draft.chapter_content);
     return (
