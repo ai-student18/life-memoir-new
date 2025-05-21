@@ -1,3 +1,6 @@
+
+import { BiographyDraft } from "@/types/biography";
+
 /**
  * Validates and transforms draft data from the database
  */

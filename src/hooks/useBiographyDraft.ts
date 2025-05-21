@@ -3,8 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { transformDraftData, isStringRecord } from "@/lib/validation";
-import type { BiographyDraft } from "@/types/biography";
+import { transformDraftData } from "@/lib/validation";
 
 /**
  * Hook for managing biography draft generation and retrieval

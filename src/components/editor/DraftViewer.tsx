@@ -17,7 +17,14 @@ interface DraftViewerProps {
 
 const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
   const [activeTab, setActiveTab] = useState("full");
-  const { draft, isLoading, error, generateDraft, isGenerating } = useBiographyDraft(biographyId);
+  const { 
+    draft, 
+    isLoading, 
+    error, 
+    generateDraft, 
+    isGenerating,
+    refetchDraft 
+  } = useBiographyDraft(biographyId);
 
   const handleUpdateFromDraft = (chapterTitle: string) => {
     if (!draft?.chapter_content || !onUpdateChapter) {
@@ -77,6 +84,14 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
     toast({
       title: "Export Started",
       description: "Your complete biography draft is being prepared for download.",
+    });
+  };
+
+  const handleRefresh = () => {
+    refetchDraft();
+    toast({
+      title: "Refreshing",
+      description: "Refreshing draft content from the database."
     });
   };
 
@@ -194,28 +209,38 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Biography Draft</h2>
-        <Button
-          onClick={() => generateDraft()}
-          disabled={isGenerating}
-          className="bg-memoir-yellow text-memoir-darkGray hover:bg-memoir-yellow/90"
-        >
-          {isGenerating ? (
-            <>
-              <LoadingSpinner className="mr-2 h-4 w-4" />
-              Generating...
-            </>
-          ) : draft ? (
-            <>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Regenerate Draft
-            </>
-          ) : (
-            <>
-              <FileText className="mr-2 h-4 w-4" />
-              Generate Draft
-            </>
-          )}
-        </Button>
+        <div className="flex space-x-2">
+          <Button
+            onClick={handleRefresh}
+            variant="outline"
+            disabled={isGenerating}
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
+          <Button
+            onClick={() => generateDraft()}
+            disabled={isGenerating}
+            className="bg-memoir-yellow text-memoir-darkGray hover:bg-memoir-yellow/90"
+          >
+            {isGenerating ? (
+              <>
+                <LoadingSpinner className="mr-2 h-4 w-4" />
+                Generating...
+              </>
+            ) : draft ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Regenerate Draft
+              </>
+            ) : (
+              <>
+                <FileText className="mr-2 h-4 w-4" />
+                Generate Draft
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {isGenerating && (
