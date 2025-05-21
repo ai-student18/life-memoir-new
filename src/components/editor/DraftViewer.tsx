@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { isStringRecord } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +16,7 @@ interface DraftViewerProps {
 
 const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
   const [activeTab, setActiveTab] = useState("full");
-  const { draft, isLoading, error, generateDraft, isGenerating, refetchDraft } = useBiographyDraft(biographyId);
+  const { draft, isLoading, error, generateDraft, isGenerating } = useBiographyDraft(biographyId);
 
   const handleUpdateFromDraft = (chapterTitle: string) => {
     if (!draft?.chapter_content || !onUpdateChapter) {
