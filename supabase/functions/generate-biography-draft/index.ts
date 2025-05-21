@@ -2,18 +2,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { initSupabaseClient } from "../_shared/supabase-client.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { createLogger } from "../_shared/logging.ts";
+import { extractChapterContent } from "./parser.ts";
+import { generateWithOpenAI } from "./openai.ts";
 
-// OpenAI API configuration
-const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
+const logger = createLogger("generate-biography-draft");
 
 interface BiographyRequest {
   biographyId: string;
-}
-
-interface OpenAIMessage {
-  role: "system" | "user" | "assistant";
-  content: string;
 }
 
 interface QuestionAnswer {
@@ -27,7 +23,7 @@ interface TOCChapter {
 }
 
 serve(async (req) => {
-  console.log("[MAIN] Starting generate-biography-draft function");
+  logger.log("Starting function");
 
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -44,7 +40,7 @@ serve(async (req) => {
     // Get JWT token from authorization header
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      console.error("[AUTH] Missing Authorization header");
+      logger.error("Missing Authorization header");
       throw new Error("Authorization header is required");
     }
 
@@ -56,20 +52,22 @@ serve(async (req) => {
     } = await supabase.auth.getUser(token);
 
     if (userError || !user) {
-      console.error("[AUTH] Error getting user:", userError?.message);
+      logger.error("Error getting user:", userError?.message);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    logger.log(`User authenticated: ${user.id}`);
+
     // Parse request body
     let requestBody;
     try {
       requestBody = await req.json();
-      console.log("[MAIN] Request body:", JSON.stringify(requestBody));
+      logger.log("Request body:", JSON.stringify(requestBody));
     } catch (error) {
-      console.error("[MAIN] Error parsing request body:", error.message);
+      logger.error("Error parsing request body:", error);
       return new Response(JSON.stringify({ error: "Invalid request body" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -78,14 +76,14 @@ serve(async (req) => {
     
     const { biographyId } = requestBody as BiographyRequest;
     if (!biographyId) {
-      console.error("[MAIN] Missing biographyId in request");
+      logger.error("Missing biographyId in request");
       return new Response(JSON.stringify({ error: "Biography ID is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    console.log(`[MAIN] Processing request for biography: ${biographyId}`);
+    logger.log(`Processing request for biography: ${biographyId}`);
 
     // Verify biography exists and belongs to the user
     const { data: biography, error: biographyError } = await supabase
@@ -96,7 +94,7 @@ serve(async (req) => {
       .single();
 
     if (biographyError || !biography) {
-      console.error("[DB] Error verifying biography:", biographyError?.message);
+      logger.error("Error verifying biography:", biographyError?.message);
       return new Response(
         JSON.stringify({
           error: "Biography not found or you don't have permission to access it",
@@ -108,17 +106,17 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[MAIN] Successfully verified biography exists: ${biographyId}`);
+    logger.log(`Successfully verified biography exists: ${biographyId}`);
 
     // Get all answers for the biography
-    console.log(`[MAIN] Fetching answers for biography: ${biographyId}`);
+    logger.log(`Fetching answers for biography: ${biographyId}`);
     const { data: answers, error: answersError } = await supabase
       .from("biography_answers")
       .select("*, biography_questions!inner(question_text)")
       .eq("biography_id", biographyId);
 
     if (answersError) {
-      console.error("[DB] Error fetching answers:", answersError.message);
+      logger.error("Error fetching answers:", answersError.message);
       return new Response(
         JSON.stringify({ error: "Failed to fetch biography answers" }),
         {
@@ -128,10 +126,10 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[MAIN] Successfully fetched ${answers.length} answers`);
+    logger.log(`Successfully fetched ${answers.length} answers`);
 
     // Get the TOC structure for the biography
-    console.log(`[MAIN] Fetching TOC for biography: ${biographyId}`);
+    logger.log(`Fetching TOC for biography: ${biographyId}`);
     const { data: tocData, error: tocError } = await supabase
       .from("biography_toc")
       .select("*")
@@ -140,7 +138,7 @@ serve(async (req) => {
       .single();
 
     if (tocError) {
-      console.error("[DB] Error fetching TOC:", tocError.message);
+      logger.error("Error fetching TOC:", tocError.message);
       return new Response(
         JSON.stringify({
           error: "Failed to fetch approved TOC. Has the TOC been approved?",
@@ -153,10 +151,23 @@ serve(async (req) => {
     }
 
     const structure = tocData?.structure as TOCChapter[];
-    console.log(`[MAIN] Successfully fetched TOC with ${structure.length} chapters`);
+    if (!structure || !Array.isArray(structure) || structure.length === 0) {
+      logger.error("Invalid TOC structure:", structure);
+      return new Response(
+        JSON.stringify({
+          error: "Invalid or empty TOC structure. Please ensure TOC is generated and approved.",
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    logger.log(`Successfully fetched TOC with ${structure.length} chapters`);
 
     // Get biography settings
-    console.log(`[MAIN] Fetching settings for biography: ${biographyId}`);
+    logger.log(`Fetching settings for biography: ${biographyId}`);
     const { data: settings, error: settingsError } = await supabase
       .from("biography_settings")
       .select("*")
@@ -164,7 +175,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (settingsError) {
-      console.error("[DB] Error fetching settings:", settingsError.message);
+      logger.error("Error fetching settings:", settingsError.message);
       // Continue without settings if not found
     }
 
@@ -172,7 +183,7 @@ serve(async (req) => {
     const tone = settings?.tone || "neutral";
     const writing_style = settings?.writing_style || "academic";
 
-    console.log(`[MAIN] Using language: ${language}, tone: ${tone}, style: ${writing_style}`);
+    logger.log(`Using language: ${language}, tone: ${tone}, style: ${writing_style}`);
 
     // Format question and answer data
     const qaData: QuestionAnswer[] = answers.map((answer) => ({
@@ -184,15 +195,20 @@ serve(async (req) => {
     const filteredQaData = qaData.filter(
       (qa) => qa.answer && qa.answer.trim() !== ""
     );
-    console.log(`[MAIN] Formatted ${filteredQaData.length} QA pairs with content`);
+    logger.log(`Formatted ${filteredQaData.length} QA pairs with content`);
 
     // Print a sample of QA data for debugging
     if (filteredQaData.length > 0) {
-      console.log("[MAIN] Sample QA pair:", JSON.stringify(filteredQaData[0]));
+      logger.log("Sample QA pair:", JSON.stringify(filteredQaData[0]));
+    }
+
+    // Check if we have enough QA data to generate a draft
+    if (filteredQaData.length < 3) {
+      logger.warn(`Only ${filteredQaData.length} QA pairs available - this might result in low-quality draft`);
     }
 
     // Build the OpenAI prompt
-    const messages: OpenAIMessage[] = [
+    const messages = [
       {
         role: "system",
         content: `You are a professional biographer specializing in creating compelling life stories. 
@@ -215,8 +231,9 @@ serve(async (req) => {
       },
     ];
 
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     if (!OPENAI_API_KEY) {
-      console.error("[OpenAI] Missing API key");
+      logger.error("Missing OpenAI API key");
       return new Response(
         JSON.stringify({ error: "OpenAI API key is not configured" }),
         {
@@ -226,151 +243,27 @@ serve(async (req) => {
       );
     }
 
-    // Call OpenAI API
-    console.log("[OpenAI] Calling API to generate biography draft");
-    console.log("[OpenAI] Request messages structure:", messages.map(m => ({role: m.role, contentLength: m.content.length})));
-    
-    const openaiResponse = await fetch(OPENAI_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
+    // Generate the biography text
+    const generatedText = await generateWithOpenAI({
+      messages,
+      config: {
+        apiKey: OPENAI_API_KEY,
         model: "gpt-4o-mini", // Using a modern, cost-effective model
-        messages,
         temperature: 0.7,
-        max_tokens: 4000,
-      }),
+        maxTokens: 4000,
+        logger
+      }
     });
 
-    if (!openaiResponse.ok) {
-      let errorDetail = "";
-      try {
-        const errorJson = await openaiResponse.json();
-        errorDetail = JSON.stringify(errorJson);
-      } catch (e) {
-        errorDetail = await openaiResponse.text();
-      }
-      
-      console.error("[OpenAI] API error:", errorDetail);
-      return new Response(
-        JSON.stringify({ error: `Failed to generate biography draft: ${errorDetail}` }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    const result = await openaiResponse.json();
-    const generatedText = result.choices[0].message.content;
-    console.log("[OpenAI] Successfully generated biography text");
-    console.log("[OpenAI] First 100 characters of text:", generatedText.substring(0, 100));
-
-    // Process the generated text to separate into chapters
-    const chapters: Record<string, string> = {};
+    // Extract chapter content from the generated text
+    const chapters = extractChapterContent({
+      structure,
+      generatedText,
+      logger
+    });
     
-    try {
-      console.log("[Parser] Starting to extract chapters from the generated text");
-      structure.forEach((chapter, index) => {
-        const chapterIndex = index + 1;
-        const chapterTitle = chapter.title.replace(/^Chapter \d+:\s*/, "").trim();
-        
-        // Create regex patterns to find chapter headings with increased flexibility
-        const patterns = [
-          new RegExp(`Chapter ${chapterIndex}[.:] ?${chapterTitle}`, "i"),
-          new RegExp(`${chapterIndex}\\. ?${chapterTitle}`, "i"),
-          new RegExp(`\\b${chapterTitle}\\b`, "i"),
-          new RegExp(`Chapter ${chapterIndex}[^a-zA-Z0-9]*`, "i"),
-          new RegExp(`^${chapterIndex}[.:]`, "m"),
-        ];
-        
-        console.log(`[Parser] Looking for chapter: "${chapter.title}" using ${patterns.length} patterns`);
-        
-        // Find where the current chapter starts in the text
-        let chapterStartMatch = null;
-        let patternUsed = null;
-        
-        for (let i = 0; i < patterns.length; i++) {
-          const pattern = patterns[i];
-          const match = generatedText.match(pattern);
-          if (match) {
-            chapterStartMatch = match;
-            patternUsed = i;
-            console.log(`[Parser] Found match for chapter ${chapterIndex} using pattern ${i}: "${match[0]}"`);
-            break;
-          }
-        }
-        
-        if (!chapterStartMatch) {
-          console.log(`[Parser] Could not find start of chapter ${chapterIndex}: ${chapterTitle}`);
-          // Add fallback content for chapters that couldn't be found
-          chapters[chapter.title] = `Chapter ${chapterIndex}: ${chapterTitle}\n\n[Content not available]`; 
-          return;
-        }
-        
-        const chapterStart = chapterStartMatch.index;
-        let chapterEnd = generatedText.length;
-        
-        // Check if there's a next chapter to determine the end
-        if (index < structure.length - 1) {
-          const nextChapter = structure[index + 1];
-          const nextChapterIndex = index + 2;
-          const nextChapterTitle = nextChapter.title.replace(/^Chapter \d+:\s*/, "").trim();
-          
-          // Similar patterns for next chapter
-          const nextChapterPatterns = [
-            new RegExp(`Chapter ${nextChapterIndex}[.:] ?${nextChapterTitle}`, "i"),
-            new RegExp(`${nextChapterIndex}\\. ?${nextChapterTitle}`, "i"),
-            new RegExp(`\\b${nextChapterTitle}\\b`, "i"),
-            new RegExp(`Chapter ${nextChapterIndex}[^a-zA-Z0-9]*`, "i"),
-            new RegExp(`^${nextChapterIndex}[.:]`, "m"),
-          ];
-          
-          for (const pattern of nextChapterPatterns) {
-            const match = generatedText.match(pattern);
-            if (match && match.index > chapterStart) {
-              chapterEnd = match.index;
-              console.log(`[Parser] Found end of chapter ${chapterIndex} at match: "${match[0]}"`);
-              break;
-            }
-          }
-        }
-        
-        // Extract the chapter content
-        const chapterContent = generatedText.substring(chapterStart, chapterEnd).trim();
-        console.log(`[Parser] Extracted chapter ${chapterIndex} content (${chapterContent.length} chars)`);
-        
-        // Add the chapter content to the chapters object
-        chapters[chapter.title] = chapterContent;
-      });
-    } catch (error) {
-      console.error("[Parser] Error extracting chapters:", error.message);
-      // Even if chapter parsing fails, continue with the full content
-    }
-
-    console.log(`[Parser] Successfully extracted ${Object.keys(chapters).length} chapters`);
-    
-    // Log a sample chapter for debugging
-    const sampleChapterTitle = Object.keys(chapters)[0];
-    if (sampleChapterTitle) {
-      console.log(`[Parser] Sample chapter "${sampleChapterTitle}" (first 100 chars):`, 
-        chapters[sampleChapterTitle].substring(0, 100));
-    }
-
-    // Ensure chapter_content is not empty - fallback to full content if needed
-    if (Object.keys(chapters).length === 0) {
-      console.log("[Parser] No chapters could be extracted, creating fallback chapters");
-      structure.forEach((chapter, index) => {
-        chapters[chapter.title] = `Chapter ${index + 1}: ${chapter.title}\n\n${
-          index === 0 ? generatedText : "[Content not available]"
-        }`;
-      });
-    }
-
     // Save the draft to the database
-    console.log(`[DB] Saving biography draft for biography: ${biographyId}`);
+    logger.log(`Saving biography draft for biography: ${biographyId}`);
     
     const draftData = {
       biography_id: biographyId,
@@ -379,7 +272,7 @@ serve(async (req) => {
       is_ai_generated: true,
     };
     
-    console.log("[DB] Draft data structure:", {
+    logger.log("Draft data structure:", {
       biography_id: draftData.biography_id,
       full_content_length: draftData.full_content.length,
       chapter_count: Object.keys(draftData.chapter_content).length,
@@ -393,7 +286,7 @@ serve(async (req) => {
       .single();
 
     if (draftError) {
-      console.error("[DB] Error saving draft:", draftError.message);
+      logger.error("Error saving draft:", draftError.message);
       return new Response(
         JSON.stringify({ error: "Failed to save biography draft" }),
         {
@@ -403,10 +296,10 @@ serve(async (req) => {
       );
     }
     
-    console.log("[DB] Draft saved successfully with ID:", draft.id);
+    logger.log("Draft saved successfully with ID:", draft.id);
 
     // Update the biography status to indicate draft generation
-    console.log(`[DB] Updating biography status to 'DraftGenerated'`);
+    logger.log(`Updating biography status to 'DraftGenerated'`);
     const { error: updateError } = await supabase
       .from("biographies")
       .update({ 
@@ -416,11 +309,11 @@ serve(async (req) => {
       .eq("id", biographyId);
       
     if (updateError) {
-      console.error("[DB] Error updating biography status:", updateError.message);
+      logger.error("Error updating biography status:", updateError.message);
       // Continue anyway since the draft is saved
     }
 
-    console.log("[MAIN] Function completed successfully");
+    logger.log("Function completed successfully");
     return new Response(
       JSON.stringify({
         message: "Biography draft generated successfully",
@@ -434,7 +327,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("[ERROR] Unhandled exception:", error.message, error.stack);
+    logger.error("Unhandled exception:", error);
     return new Response(
       JSON.stringify({ error: "Failed to generate biography draft: " + error.message }),
       {

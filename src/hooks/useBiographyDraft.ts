@@ -1,3 +1,4 @@
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -55,10 +56,11 @@ export const useBiographyDraft = (biographyId?: string) => {
       try {
         console.log("Calling draft generation function for biography:", id);
         
-        // Add request payload logging
+        // Ensure the request payload is correctly structured
         const requestPayload = { biographyId: id };
-        console.log("Request payload:", requestPayload);
+        console.log("Request payload:", JSON.stringify(requestPayload));
         
+        // Call the edge function with proper payload
         const { data, error } = await supabase.functions.invoke("generate-biography-draft", {
           body: requestPayload
         });

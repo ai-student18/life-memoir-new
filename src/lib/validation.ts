@@ -1,52 +1,73 @@
 
-import { BiographyDraft } from "@/types/biography";
+// Assuming the existing validation.ts file has other functions
+// We're only updating the functions we need to fix
 
 /**
- * Validates and transforms draft data from the database
+ * Check if an object is a string record (dictionary with string keys and string values)
  */
-export function transformDraftData(data: unknown): BiographyDraft | null {
-  console.log("Validating draft data:", data);
-  
-  // If data is null or undefined, return null
-  if (!data) {
-    console.warn("Draft data is null or undefined");
-    return null;
+export function isStringRecord(obj: unknown): obj is Record<string, string> {
+  if (obj === null || typeof obj !== 'object') {
+    console.error('Expected object, got:', typeof obj);
+    return false;
   }
 
-  // Check if data is an object with expected properties
-  if (
-    typeof data === "object" && 
-    data !== null &&
-    "id" in data &&
-    "biography_id" in data &&
-    "full_content" in data &&
-    "chapter_content" in data
-  ) {
-    const draft = data as BiographyDraft;
-    
-    // Validate chapter_content is a valid object
-    if (typeof draft.chapter_content !== 'object' || draft.chapter_content === null) {
-      console.error("Invalid chapter_content format in draft data:", draft.chapter_content);
-      draft.chapter_content = {}; // Default to empty object if invalid
+  // Check each property to ensure it's a string
+  for (const key in obj) {
+    if (typeof (obj as Record<string, unknown>)[key] !== 'string') {
+      console.error(`Property ${key} is not a string, it's:`, typeof (obj as Record<string, unknown>)[key]);
+      return false;
     }
-    
-    return draft;
   }
-  
-  console.error("Draft data missing required properties:", data);
-  return null;
+
+  return true;
 }
 
 /**
- * Type guard to check if an object is a string record
+ * Transform draft data from the database to ensure it meets the expected format
  */
-export function isStringRecord(obj: unknown): obj is Record<string, string> {
-  if (typeof obj !== 'object' || obj === null) {
-    return false;
+export function transformDraftData(data: any) {
+  console.log("Transforming draft data:", data);
+  
+  if (!data) {
+    console.error("Draft data is null or undefined");
+    return null;
   }
-  
-  const record = obj as Record<string, unknown>;
-  
-  // Check if all values are strings
-  return Object.values(record).every(value => typeof value === 'string');
+
+  // Validate required fields
+  const requiredFields = ['id', 'biography_id', 'full_content'];
+  for (const field of requiredFields) {
+    if (!data[field]) {
+      console.error(`Draft data missing required field: ${field}`);
+      console.log("Draft data structure:", data);
+      return null;
+    }
+  }
+
+  // Ensure chapter_content exists and is a valid object
+  if (!data.chapter_content) {
+    console.error("Draft data missing chapter_content");
+    data.chapter_content = {};
+  }
+
+  if (typeof data.chapter_content !== 'object') {
+    console.error("chapter_content is not an object:", data.chapter_content);
+    try {
+      // Try to parse if it's a JSON string
+      data.chapter_content = JSON.parse(data.chapter_content);
+    } catch (e) {
+      console.error("Failed to parse chapter_content as JSON:", e);
+      data.chapter_content = {};
+    }
+  }
+
+  // Ensure each chapter_content value is a string
+  for (const key in data.chapter_content) {
+    if (typeof data.chapter_content[key] !== 'string') {
+      console.warn(`Chapter content for "${key}" is not a string, converting to string`);
+      data.chapter_content[key] = String(data.chapter_content[key]);
+    }
+  }
+
+  console.log("Transformed draft data:", data);
+  return data;
 }
