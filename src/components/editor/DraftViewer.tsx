@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { isStringRecord } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -81,6 +82,19 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
 
   const renderChapterTabs = () => {
     if (!draft) return null;
+    console.log("Rendering chapter tabs with draft:", draft);
+
+    // Check if chapter_content exists and is properly formatted
+    if (!draft.chapter_content || typeof draft.chapter_content !== 'object' || draft.chapter_content === null) {
+      return (
+        <Alert variant="destructive">
+          <AlertTitle>Invalid chapter content format</AlertTitle>
+          <AlertDescription>
+            The chapter content data is missing or not in the expected format.
+          </AlertDescription>
+        </Alert>
+      );
+    }
 
     // Ensure chapter_content is a record with string values
     if (!isStringRecord(draft.chapter_content)) {
@@ -165,6 +179,7 @@ const DraftViewer = ({ biographyId, onUpdateChapter }: DraftViewerProps) => {
   }
 
   if (error) {
+    console.error("Draft loading error:", error);
     return (
       <Alert variant="destructive">
         <AlertTitle>Error loading draft</AlertTitle>

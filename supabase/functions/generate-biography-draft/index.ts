@@ -63,8 +63,12 @@ serve(async (req) => {
     }
 
     // Parse request body
-    const { biographyId } = await req.json() as BiographyRequest;
+    const requestBody = await req.json();
+    console.log("[MAIN] Request body:", requestBody);
+    
+    const { biographyId } = requestBody as BiographyRequest;
     if (!biographyId) {
+      console.error("[MAIN] Missing biographyId in request");
       return new Response(JSON.stringify({ error: "Biography ID is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -238,6 +242,7 @@ serve(async (req) => {
     const result = await openaiResponse.json();
     const generatedText = result.choices[0].message.content;
     console.log("[OpenAI] Successfully generated biography text");
+    console.log("[OpenAI] First 100 characters of text:", generatedText.substring(0, 100));
 
     // Process the generated text to separate into chapters
     const chapters: Record<string, string> = {};
@@ -266,6 +271,7 @@ serve(async (req) => {
       
       if (!chapterStartMatch) {
         console.log(`[Parser] Could not find start of chapter ${chapterIndex}: ${chapterTitle}`);
+        chapters[chapter.title] = ""; // Add empty content for chapters that couldn't be found
         return;
       }
       
@@ -301,17 +307,29 @@ serve(async (req) => {
     });
 
     console.log(`[Parser] Successfully extracted ${Object.keys(chapters).length} chapters`);
+    
+    // Log a sample chapter for debugging
+    const sampleChapterTitle = Object.keys(chapters)[0];
+    if (sampleChapterTitle) {
+      console.log(`[Parser] Sample chapter "${sampleChapterTitle}" (first 100 chars):`, 
+        chapters[sampleChapterTitle].substring(0, 100));
+    }
 
     // Save the draft to the database
     console.log(`[DB] Saving biography draft for biography: ${biographyId}`);
+    
+    const draftData = {
+      biography_id: biographyId,
+      full_content: generatedText,
+      chapter_content: chapters,
+      is_ai_generated: true,
+    };
+    
+    console.log("[DB] Draft data to be saved:", draftData);
+    
     const { data: draft, error: draftError } = await supabase
       .from("biography_drafts")
-      .insert({
-        biography_id: biographyId,
-        full_content: generatedText,
-        chapter_content: chapters,
-        is_ai_generated: true,
-      })
+      .insert(draftData)
       .select("*")
       .single();
 
@@ -325,13 +343,23 @@ serve(async (req) => {
         }
       );
     }
+    
+    console.log("[DB] Draft saved successfully:", draft.id);
 
     // Update the biography status to indicate draft generation
     console.log(`[DB] Updating biography status to 'DraftGenerated'`);
-    await supabase
+    const { error: updateError } = await supabase
       .from("biographies")
-      .update({ status: "DraftGenerated", updated_at: new Date().toISOString() })
+      .update({ 
+        status: "DraftGenerated", 
+        updated_at: new Date().toISOString() 
+      })
       .eq("id", biographyId);
+      
+    if (updateError) {
+      console.error("[DB] Error updating biography status:", updateError.message);
+      // Continue anyway since the draft is saved
+    }
 
     console.log("[MAIN] Function completed successfully");
     return new Response(
@@ -339,6 +367,7 @@ serve(async (req) => {
         message: "Biography draft generated successfully",
         draftId: draft.id,
         chapters: Object.keys(chapters).length,
+        full_content: generatedText.substring(0, 100) + "...", // Preview for debugging
       }),
       {
         status: 200,

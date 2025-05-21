@@ -1,34 +1,49 @@
-import { BiographyDraft } from "@/types/biography";
-import { isStringRecord } from "./utils";
-
 /**
- * Validates if the given data matches the BiographyDraft interface
+ * Validates and transforms draft data from the database
  */
-export function validateDraftData(data: unknown): data is BiographyDraft {
-  if (!data || typeof data !== 'object') return false;
+export function transformDraftData(data: unknown): BiographyDraft | null {
+  console.log("Validating draft data:", data);
   
-  const draft = data as BiographyDraft;
+  // If data is null or undefined, return null
+  if (!data) {
+    console.warn("Draft data is null or undefined");
+    return null;
+  }
+
+  // Check if data is an object with expected properties
+  if (
+    typeof data === "object" && 
+    data !== null &&
+    "id" in data &&
+    "biography_id" in data &&
+    "full_content" in data &&
+    "chapter_content" in data
+  ) {
+    const draft = data as BiographyDraft;
+    
+    // Validate chapter_content is a valid object
+    if (typeof draft.chapter_content !== 'object' || draft.chapter_content === null) {
+      console.error("Invalid chapter_content format in draft data:", draft.chapter_content);
+      draft.chapter_content = {}; // Default to empty object if invalid
+    }
+    
+    return draft;
+  }
   
-  return (
-    typeof draft.id === 'string' &&
-    typeof draft.biography_id === 'string' &&
-    typeof draft.full_content === 'string' &&
-    isStringRecord(draft.chapter_content) &&
-    typeof draft.is_ai_generated === 'boolean' &&
-    typeof draft.created_at === 'string' &&
-    typeof draft.updated_at === 'string'
-  );
+  console.error("Draft data missing required properties:", data);
+  return null;
 }
 
 /**
- * Transforms raw data into a valid BiographyDraft object
- * Returns null if the data is invalid
+ * Type guard to check if an object is a string record
  */
-export function transformDraftData(data: unknown): BiographyDraft | null {
-  if (!validateDraftData(data)) return null;
+export function isStringRecord(obj: unknown): obj is Record<string, string> {
+  if (typeof obj !== 'object' || obj === null) {
+    return false;
+  }
   
-  return {
-    ...data,
-    chapter_content: data.chapter_content || {}
-  };
-} 
+  const record = obj as Record<string, unknown>;
+  
+  // Check if all values are strings
+  return Object.values(record).every(value => typeof value === 'string');
+}
