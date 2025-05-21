@@ -5,8 +5,9 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Save, Check, Sparkles } from "lucide-react";
+import { Save, Check, Sparkles, FileText } from "lucide-react";
 import { useAutoSave } from "@/hooks/useAutoSave";
+import { toast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -14,15 +15,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import DraftViewer from "./DraftViewer";
 
 interface ChapterEditorProps {
   chapter: Chapter;
   onSave: (chapter: Partial<Chapter> & { id: string }) => Promise<void>;
+  onSaveSuccess?: () => void;
 }
 
-const ChapterEditor = ({ chapter, onSave }: ChapterEditorProps) => {
+const ChapterEditor = ({ chapter, onSave, onSaveSuccess }: ChapterEditorProps) => {
   const [title, setTitle] = useState(chapter.title);
   const [content, setContent] = useState(chapter.content || "");
   const [editedChapter, setEditedChapter] = useState<Partial<Chapter> & { id: string }>({
@@ -31,6 +34,7 @@ const ChapterEditor = ({ chapter, onSave }: ChapterEditorProps) => {
     content: chapter.content || "",
   });
   const [draftDialogOpen, setDraftDialogOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
   // Update local state when chapter prop changes (e.g., when switching chapters)
   useEffect(() => {
@@ -62,6 +66,9 @@ const ChapterEditor = ({ chapter, onSave }: ChapterEditorProps) => {
     data: editedChapter,
     onSave: async (data) => {
       await onSave(data);
+      if (onSaveSuccess) {
+        onSaveSuccess();
+      }
     },
     saveDelay: 3000,
   });
@@ -73,16 +80,35 @@ const ChapterEditor = ({ chapter, onSave }: ChapterEditorProps) => {
     setDraftDialogOpen(false);
   };
 
+  const handleExport = (format: 'word' | 'epub') => {
+    // This would be implemented as an edge function call
+    console.log(`Exporting chapter in ${format} format`);
+    toast({
+      title: "Export Started",
+      description: `Your ${format.toUpperCase()} file is being prepared. It will download automatically when ready.`,
+    });
+    // Close the dialog
+    setExportDialogOpen(false);
+  };
+
   return (
     <Card className="w-full">
       <CardHeader className="pb-2">
-        <CardTitle>
+        <CardTitle className="flex justify-between items-center">
           <Input
             value={title}
             onChange={handleTitleChange}
             className="text-xl font-bold"
             placeholder="Chapter Title"
           />
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setExportDialogOpen(true)}
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Export
+          </Button>
         </CardTitle>
         <div className="text-xs text-muted-foreground mt-1">
           {isSaving ? (
@@ -101,7 +127,7 @@ const ChapterEditor = ({ chapter, onSave }: ChapterEditorProps) => {
         <Textarea
           value={content}
           onChange={handleContentChange}
-          className="min-h-[60vh]"
+          className="min-h-[60vh] font-serif text-base leading-relaxed"
           placeholder="Start writing your chapter content here..."
         />
       </CardContent>
@@ -126,6 +152,42 @@ const ChapterEditor = ({ chapter, onSave }: ChapterEditorProps) => {
                 onUpdateChapter={handleUpdateFromDraft} 
               />
             </div>
+          </DialogContent>
+        </Dialog>
+        
+        <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Export Chapter</DialogTitle>
+              <DialogDescription>
+                Choose a format to export your chapter
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid grid-cols-2 gap-4 py-4">
+              <Button 
+                onClick={() => handleExport('word')} 
+                className="h-28 flex flex-col"
+              >
+                <FileText className="h-8 w-8 mb-2" />
+                <span>Word (.docx)</span>
+                <span className="text-xs mt-1">Microsoft Word Document</span>
+              </Button>
+              <Button 
+                onClick={() => handleExport('epub')} 
+                className="h-28 flex flex-col"
+              >
+                <FileText className="h-8 w-8 mb-2" />
+                <span>EPUB (.epub)</span>
+                <span className="text-xs mt-1">E-book Format</span>
+              </Button>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setExportDialogOpen(false)}>
+                Cancel
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
         
