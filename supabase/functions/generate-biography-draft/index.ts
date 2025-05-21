@@ -44,6 +44,7 @@ serve(async (req) => {
     // Get JWT token from authorization header
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
+      console.error("[AUTH] Missing Authorization header");
       throw new Error("Authorization header is required");
     }
 
@@ -63,8 +64,17 @@ serve(async (req) => {
     }
 
     // Parse request body
-    const requestBody = await req.json();
-    console.log("[MAIN] Request body:", requestBody);
+    let requestBody;
+    try {
+      requestBody = await req.json();
+      console.log("[MAIN] Request body:", JSON.stringify(requestBody));
+    } catch (error) {
+      console.error("[MAIN] Error parsing request body:", error.message);
+      return new Response(JSON.stringify({ error: "Invalid request body" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     
     const { biographyId } = requestBody as BiographyRequest;
     if (!biographyId) {
@@ -176,6 +186,11 @@ serve(async (req) => {
     );
     console.log(`[MAIN] Formatted ${filteredQaData.length} QA pairs with content`);
 
+    // Print a sample of QA data for debugging
+    if (filteredQaData.length > 0) {
+      console.log("[MAIN] Sample QA pair:", JSON.stringify(filteredQaData[0]));
+    }
+
     // Build the OpenAI prompt
     const messages: OpenAIMessage[] = [
       {
@@ -213,6 +228,8 @@ serve(async (req) => {
 
     // Call OpenAI API
     console.log("[OpenAI] Calling API to generate biography draft");
+    console.log("[OpenAI] Request messages structure:", messages.map(m => ({role: m.role, contentLength: m.content.length})));
+    
     const openaiResponse = await fetch(OPENAI_API_URL, {
       method: "POST",
       headers: {
@@ -228,10 +245,17 @@ serve(async (req) => {
     });
 
     if (!openaiResponse.ok) {
-      const error = await openaiResponse.json();
-      console.error("[OpenAI] API error:", error);
+      let errorDetail = "";
+      try {
+        const errorJson = await openaiResponse.json();
+        errorDetail = JSON.stringify(errorJson);
+      } catch (e) {
+        errorDetail = await openaiResponse.text();
+      }
+      
+      console.error("[OpenAI] API error:", errorDetail);
       return new Response(
-        JSON.stringify({ error: "Failed to generate biography draft" }),
+        JSON.stringify({ error: `Failed to generate biography draft: ${errorDetail}` }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -246,65 +270,85 @@ serve(async (req) => {
 
     // Process the generated text to separate into chapters
     const chapters: Record<string, string> = {};
-    let currentText = generatedText;
-
-    structure.forEach((chapter, index) => {
-      const chapterIndex = index + 1;
-      const chapterTitle = chapter.title.replace(/^Chapter \d+:\s*/, "").trim();
-      
-      // Create regex patterns to find chapter headings
-      const patterns = [
-        new RegExp(`Chapter ${chapterIndex}[.:] ?${chapterTitle}`, "i"),
-        new RegExp(`${chapterIndex}\\. ?${chapterTitle}`, "i"),
-        new RegExp(`${chapterTitle}`, "i"),
-      ];
-      
-      // Find where the current chapter starts
-      let chapterStartMatch = null;
-      for (const pattern of patterns) {
-        const match = currentText.match(pattern);
-        if (match) {
-          chapterStartMatch = match;
-          break;
-        }
-      }
-      
-      if (!chapterStartMatch) {
-        console.log(`[Parser] Could not find start of chapter ${chapterIndex}: ${chapterTitle}`);
-        chapters[chapter.title] = ""; // Add empty content for chapters that couldn't be found
-        return;
-      }
-      
-      const chapterStart = chapterStartMatch.index;
-      let chapterEnd = currentText.length;
-      
-      // Check if there's a next chapter to determine the end
-      if (index < structure.length - 1) {
-        const nextChapterTitle = structure[index + 1].title.replace(/^Chapter \d+:\s*/, "").trim();
-        const nextChapterPatterns = [
-          new RegExp(`Chapter ${chapterIndex + 1}[.:] ?${nextChapterTitle}`, "i"),
-          new RegExp(`${chapterIndex + 1}\\. ?${nextChapterTitle}`, "i"),
-          new RegExp(`${nextChapterTitle}`, "i"),
+    
+    try {
+      console.log("[Parser] Starting to extract chapters from the generated text");
+      structure.forEach((chapter, index) => {
+        const chapterIndex = index + 1;
+        const chapterTitle = chapter.title.replace(/^Chapter \d+:\s*/, "").trim();
+        
+        // Create regex patterns to find chapter headings with increased flexibility
+        const patterns = [
+          new RegExp(`Chapter ${chapterIndex}[.:] ?${chapterTitle}`, "i"),
+          new RegExp(`${chapterIndex}\\. ?${chapterTitle}`, "i"),
+          new RegExp(`\\b${chapterTitle}\\b`, "i"),
+          new RegExp(`Chapter ${chapterIndex}[^a-zA-Z0-9]*`, "i"),
+          new RegExp(`^${chapterIndex}[.:]`, "m"),
         ];
         
-        for (const pattern of nextChapterPatterns) {
-          const match = currentText.match(pattern);
-          if (match && match.index > chapterStart) {
-            chapterEnd = match.index;
+        console.log(`[Parser] Looking for chapter: "${chapter.title}" using ${patterns.length} patterns`);
+        
+        // Find where the current chapter starts in the text
+        let chapterStartMatch = null;
+        let patternUsed = null;
+        
+        for (let i = 0; i < patterns.length; i++) {
+          const pattern = patterns[i];
+          const match = generatedText.match(pattern);
+          if (match) {
+            chapterStartMatch = match;
+            patternUsed = i;
+            console.log(`[Parser] Found match for chapter ${chapterIndex} using pattern ${i}: "${match[0]}"`);
             break;
           }
         }
-      }
-      
-      // Extract the chapter content
-      const chapterContent = currentText.substring(chapterStart, chapterEnd).trim();
-      chapters[chapter.title] = chapterContent;
-      
-      // Update the current text to start from the next chapter
-      if (chapterEnd < currentText.length) {
-        currentText = currentText.substring(chapterEnd);
-      }
-    });
+        
+        if (!chapterStartMatch) {
+          console.log(`[Parser] Could not find start of chapter ${chapterIndex}: ${chapterTitle}`);
+          // Add fallback content for chapters that couldn't be found
+          chapters[chapter.title] = `Chapter ${chapterIndex}: ${chapterTitle}\n\n[Content not available]`; 
+          return;
+        }
+        
+        const chapterStart = chapterStartMatch.index;
+        let chapterEnd = generatedText.length;
+        
+        // Check if there's a next chapter to determine the end
+        if (index < structure.length - 1) {
+          const nextChapter = structure[index + 1];
+          const nextChapterIndex = index + 2;
+          const nextChapterTitle = nextChapter.title.replace(/^Chapter \d+:\s*/, "").trim();
+          
+          // Similar patterns for next chapter
+          const nextChapterPatterns = [
+            new RegExp(`Chapter ${nextChapterIndex}[.:] ?${nextChapterTitle}`, "i"),
+            new RegExp(`${nextChapterIndex}\\. ?${nextChapterTitle}`, "i"),
+            new RegExp(`\\b${nextChapterTitle}\\b`, "i"),
+            new RegExp(`Chapter ${nextChapterIndex}[^a-zA-Z0-9]*`, "i"),
+            new RegExp(`^${nextChapterIndex}[.:]`, "m"),
+          ];
+          
+          for (const pattern of nextChapterPatterns) {
+            const match = generatedText.match(pattern);
+            if (match && match.index > chapterStart) {
+              chapterEnd = match.index;
+              console.log(`[Parser] Found end of chapter ${chapterIndex} at match: "${match[0]}"`);
+              break;
+            }
+          }
+        }
+        
+        // Extract the chapter content
+        const chapterContent = generatedText.substring(chapterStart, chapterEnd).trim();
+        console.log(`[Parser] Extracted chapter ${chapterIndex} content (${chapterContent.length} chars)`);
+        
+        // Add the chapter content to the chapters object
+        chapters[chapter.title] = chapterContent;
+      });
+    } catch (error) {
+      console.error("[Parser] Error extracting chapters:", error.message);
+      // Even if chapter parsing fails, continue with the full content
+    }
 
     console.log(`[Parser] Successfully extracted ${Object.keys(chapters).length} chapters`);
     
@@ -313,6 +357,16 @@ serve(async (req) => {
     if (sampleChapterTitle) {
       console.log(`[Parser] Sample chapter "${sampleChapterTitle}" (first 100 chars):`, 
         chapters[sampleChapterTitle].substring(0, 100));
+    }
+
+    // Ensure chapter_content is not empty - fallback to full content if needed
+    if (Object.keys(chapters).length === 0) {
+      console.log("[Parser] No chapters could be extracted, creating fallback chapters");
+      structure.forEach((chapter, index) => {
+        chapters[chapter.title] = `Chapter ${index + 1}: ${chapter.title}\n\n${
+          index === 0 ? generatedText : "[Content not available]"
+        }`;
+      });
     }
 
     // Save the draft to the database
@@ -325,7 +379,12 @@ serve(async (req) => {
       is_ai_generated: true,
     };
     
-    console.log("[DB] Draft data to be saved:", draftData);
+    console.log("[DB] Draft data structure:", {
+      biography_id: draftData.biography_id,
+      full_content_length: draftData.full_content.length,
+      chapter_count: Object.keys(draftData.chapter_content).length,
+      is_ai_generated: draftData.is_ai_generated
+    });
     
     const { data: draft, error: draftError } = await supabase
       .from("biography_drafts")
@@ -344,7 +403,7 @@ serve(async (req) => {
       );
     }
     
-    console.log("[DB] Draft saved successfully:", draft.id);
+    console.log("[DB] Draft saved successfully with ID:", draft.id);
 
     // Update the biography status to indicate draft generation
     console.log(`[DB] Updating biography status to 'DraftGenerated'`);
@@ -367,7 +426,7 @@ serve(async (req) => {
         message: "Biography draft generated successfully",
         draftId: draft.id,
         chapters: Object.keys(chapters).length,
-        full_content: generatedText.substring(0, 100) + "...", // Preview for debugging
+        full_content_length: generatedText.length,
       }),
       {
         status: 200,
@@ -375,7 +434,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("[ERROR] Unhandled exception:", error.message);
+    console.error("[ERROR] Unhandled exception:", error.message, error.stack);
     return new Response(
       JSON.stringify({ error: "Failed to generate biography draft: " + error.message }),
       {

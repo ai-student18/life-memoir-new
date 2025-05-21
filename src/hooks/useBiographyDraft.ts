@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { transformDraftData } from "@/lib/validation";
+import { BiographyDraft } from "@/types/biography";
 
 /**
  * Hook for managing biography draft generation and retrieval
@@ -36,6 +37,7 @@ export const useBiographyDraft = (biographyId?: string) => {
       
       // Validate and transform the data
       const validatedData = transformDraftData(data);
+      
       if (!validatedData) {
         console.error("Invalid draft data received:", data);
         throw new Error("Invalid draft data received from server");
@@ -54,8 +56,13 @@ export const useBiographyDraft = (biographyId?: string) => {
       setIsGenerating(true);
       try {
         console.log("Calling draft generation function for biography:", id);
+        
+        // Add request payload logging
+        const requestPayload = { biographyId: id };
+        console.log("Request payload:", requestPayload);
+        
         const { data, error } = await supabase.functions.invoke("generate-biography-draft", {
-          body: { biographyId: id }
+          body: requestPayload
         });
 
         if (error) {
@@ -66,7 +73,7 @@ export const useBiographyDraft = (biographyId?: string) => {
         console.log("Response from draft generation:", data);
         
         // Let's wait for a moment to ensure the draft is saved in the database
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1500));
         
         return data;
       } finally {

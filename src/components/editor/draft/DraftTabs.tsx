@@ -2,13 +2,14 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { isStringRecord } from "@/lib/utils";
+import { isStringRecord } from "@/lib/validation";
 import { FullBiographyView } from "./FullBiographyView";
 import { ChapterView } from "./ChapterView";
 import { toast } from "@/hooks/use-toast";
+import { BiographyDraft } from "@/types/biography";
 
 interface DraftTabsProps {
-  draft: any;
+  draft: BiographyDraft;
   onUpdateChapter?: (chapterIndex: number, content: string) => void;
 }
 
@@ -17,13 +18,25 @@ export const DraftTabs = ({ draft, onUpdateChapter }: DraftTabsProps) => {
 
   if (!draft) return null;
 
+  // Add detailed logging for debugging
+  console.log("DraftTabs rendering with draft:", {
+    id: draft.id,
+    biography_id: draft.biography_id,
+    has_full_content: !!draft.full_content,
+    full_content_length: draft.full_content?.length || 0,
+    chapter_content_type: typeof draft.chapter_content,
+    is_chapter_content_null: draft.chapter_content === null,
+    chapter_keys: draft.chapter_content ? Object.keys(draft.chapter_content) : []
+  });
+
   // Check if chapter_content exists and is properly formatted
   if (!draft.chapter_content || typeof draft.chapter_content !== 'object' || draft.chapter_content === null) {
+    console.error("Invalid chapter content format:", draft.chapter_content);
     return (
       <Alert variant="destructive">
         <AlertTitle>Invalid chapter content format</AlertTitle>
         <AlertDescription>
-          The chapter content data is missing or not in the expected format.
+          The chapter content data is missing or not in the expected format. Please try regenerating the draft.
         </AlertDescription>
       </Alert>
     );
@@ -31,11 +44,12 @@ export const DraftTabs = ({ draft, onUpdateChapter }: DraftTabsProps) => {
 
   // Ensure chapter_content is a record with string values
   if (!isStringRecord(draft.chapter_content)) {
+    console.error("Chapter content is not a record with string values:", draft.chapter_content);
     return (
       <Alert variant="destructive">
         <AlertTitle>Invalid data format</AlertTitle>
         <AlertDescription>
-          The chapter content data is not in the expected format.
+          The chapter content data is not in the expected format. Please try regenerating the draft.
         </AlertDescription>
       </Alert>
     );
@@ -94,7 +108,9 @@ export const DraftTabs = ({ draft, onUpdateChapter }: DraftTabsProps) => {
     }
   };
 
+  // Get chapter titles
   const chapters = Object.keys(draft.chapter_content);
+  console.log(`Rendering ${chapters.length} chapters in tabs`);
   
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
