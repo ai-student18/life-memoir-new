@@ -9,7 +9,8 @@ export enum BiographyStatus {
   TOCApproved = "TOCApproved",
   DraftGenerated = "DraftGenerated",
   InProgress = "InProgress",
-  Completed = "Completed"
+  Completed = "Completed",
+  Published = "Published" // Added Published status
 }
 
 /**

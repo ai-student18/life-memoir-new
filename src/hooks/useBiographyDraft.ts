@@ -18,7 +18,6 @@ export const useBiographyDraft = (biographyId?: string) => {
     queryFn: async () => {
       if (!biographyId) throw new Error("Biography ID is required");
 
-      console.log("Fetching drafts for biography:", biographyId);
       const { data, error } = await supabase
         .from("biography_drafts")
         .select("*")
@@ -27,22 +26,20 @@ export const useBiographyDraft = (biographyId?: string) => {
         .limit(1)
         .maybeSingle();
 
-      if (error) {
-        console.error("Error fetching draft:", error);
-        throw error;
+      if (error) throw error;
+      
+      // If no data is found, return null directly
+      if (!data) {
+        return null;
       }
-      
-      console.log("Raw draft data from DB:", data);
-      
+
       // Validate and transform the data
       const validatedData = transformDraftData(data);
-      
       if (!validatedData) {
-        console.error("Invalid draft data received:", data);
+        // If data is malformed, throw an error
         throw new Error("Invalid draft data received from server");
       }
       
-      console.log("Validated draft data:", validatedData);
       return validatedData;
     },
     enabled: !!biographyId,
@@ -54,28 +51,15 @@ export const useBiographyDraft = (biographyId?: string) => {
     mutationFn: async (id: string) => {
       setIsGenerating(true);
       try {
-        console.log("Calling draft generation function for biography:", id);
-        
-        // Ensure the request payload is correctly structured
-        const requestPayload = { biographyId: id };
-        console.log("Request payload:", JSON.stringify(requestPayload));
-        
-        // Call the edge function with proper payload
         const { data, error } = await supabase.functions.invoke("generate-biography-draft", {
-          body: requestPayload
+          body: { biographyId: id }
         });
 
-        if (error) {
-          console.error("Edge function error:", error);
-          throw error;
-        }
+        if (error) throw error;
         
-        console.log("Response from draft generation:", data);
-        
-        // Let's wait for a moment to ensure the draft is saved in the database
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        return data;
+        // The Edge Function returns a summary, not the full draft.
+        // The draft will be fetched by the draftQuery after invalidation.
+        return data; // Return the summary data
       } finally {
         setIsGenerating(false);
       }
@@ -89,7 +73,6 @@ export const useBiographyDraft = (biographyId?: string) => {
       queryClient.invalidateQueries({ queryKey: ["biography", biographyId] });
     },
     onError: (error: any) => {
-      console.error("Draft generation error:", error);
       toast({
         title: "Error",
         description: `Failed to generate draft: ${error?.message || "Unknown error"}`,
@@ -100,6 +83,7 @@ export const useBiographyDraft = (biographyId?: string) => {
 
   // Function to generate a new draft
   const generateDraft = async () => {
+    console.log("generateDraft called in useBiographyDraft.ts with biographyId:", biographyId);
     if (!biographyId) {
       toast({
         title: "Error",
@@ -112,14 +96,12 @@ export const useBiographyDraft = (biographyId?: string) => {
     return generateDraftMutation.mutateAsync(biographyId);
   };
 
-  const refetchDraft = () => queryClient.invalidateQueries({ queryKey: ["biography-draft", biographyId] });
-
   return {
     draft: draftQuery.data,
     isLoading: draftQuery.isLoading,
     error: draftQuery.error,
     generateDraft,
     isGenerating,
-    refetchDraft
+    refetchDraft: () => queryClient.invalidateQueries({ queryKey: ["biography-draft", biographyId] }),
   };
 };

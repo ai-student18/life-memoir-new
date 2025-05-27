@@ -12,6 +12,7 @@ import BiographyQuestionnaire from "./pages/BiographyQuestionnaire";
 import BiographyTOC from "./pages/BiographyTOC";
 import BiographyEditor from "./pages/BiographyEditor";
 import BiographyDraft from "./pages/BiographyDraft";
+import ViewBiography from "./pages/ViewBiography"; // Import ViewBiography
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 
@@ -68,6 +69,8 @@ const App = () => {
                   <BiographyEditor />
                 </ProtectedRoute>
               } />
+              {/* Public View Route */}
+              <Route path="/view-biography/:biographyId" element={<ViewBiography />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

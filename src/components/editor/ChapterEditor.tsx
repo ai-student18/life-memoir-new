@@ -1,13 +1,13 @@
-
 import { useState, useEffect } from "react";
 import { Chapter } from "@/types/biography";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Save, Check, Sparkles, FileText } from "lucide-react";
+import { Save, Check, Sparkles } from "lucide-react";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { toast } from "@/hooks/use-toast";
+import RichTextEditor from "./RichTextEditor"; // Import RichTextEditor
+import { supabase } from "@/integrations/supabase/client"; // Ensure supabase is imported
 import {
   Dialog,
   DialogContent,
@@ -23,9 +23,10 @@ interface ChapterEditorProps {
   chapter: Chapter;
   onSave: (chapter: Partial<Chapter> & { id: string }) => Promise<void>;
   onSaveSuccess?: () => void;
+  onOpenDraftModal?: () => void; // New prop to open the draft modal from parent
 }
 
-const ChapterEditor = ({ chapter, onSave, onSaveSuccess }: ChapterEditorProps) => {
+const ChapterEditor = ({ chapter, onSave, onSaveSuccess, onOpenDraftModal }: ChapterEditorProps) => {
   const [title, setTitle] = useState(chapter.title);
   const [content, setContent] = useState(chapter.content || "");
   const [editedChapter, setEditedChapter] = useState<Partial<Chapter> & { id: string }>({
@@ -33,8 +34,8 @@ const ChapterEditor = ({ chapter, onSave, onSaveSuccess }: ChapterEditorProps) =
     title: chapter.title,
     content: chapter.content || "",
   });
-  const [draftDialogOpen, setDraftDialogOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Update local state when chapter prop changes (e.g., when switching chapters)
   useEffect(() => {
@@ -54,9 +55,8 @@ const ChapterEditor = ({ chapter, onSave, onSaveSuccess }: ChapterEditorProps) =
     setEditedChapter(prev => ({ ...prev, title: newTitle }));
   };
 
-  // Handle content change
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newContent = e.target.value;
+  // Handle content change (now receives HTML string from RichTextEditor)
+  const handleContentChange = (newContent: string) => {
     setContent(newContent);
     setEditedChapter(prev => ({ ...prev, content: newContent }));
   };
@@ -73,22 +73,40 @@ const ChapterEditor = ({ chapter, onSave, onSaveSuccess }: ChapterEditorProps) =
     saveDelay: 3000,
   });
 
-  // Handle updating content from draft
-  const handleUpdateFromDraft = (_chapterIndex: number, draftContent: string) => {
-    setContent(draftContent);
-    setEditedChapter(prev => ({ ...prev, content: draftContent }));
-    setDraftDialogOpen(false);
-  };
+  const handleExport = async (format: 'html') => {
+    setIsExporting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-export-file", {
+        body: { biographyId: chapter.biography_id, format: format },
+      });
 
-  const handleExport = (format: 'word' | 'epub') => {
-    // This would be implemented as an edge function call
-    console.log(`Exporting chapter in ${format} format`);
-    toast({
-      title: "Export Started",
-      description: `Your ${format.toUpperCase()} file is being prepared. It will download automatically when ready.`,
-    });
-    // Close the dialog
-    setExportDialogOpen(false);
+      if (error) throw error;
+
+      const blob = new Blob([new Uint8Array(data.data)], { type: data.contentType });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = data.filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Export Complete",
+        description: `Your ${format.toUpperCase()} file has been downloaded.`,
+      });
+    } catch (error: any) {
+      console.error("Error exporting file:", error);
+      toast({
+        title: "Export Failed",
+        description: `Failed to export file: ${error.message || "Unknown error"}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+      setExportDialogOpen(false);
+    }
   };
 
   return (
@@ -101,13 +119,13 @@ const ChapterEditor = ({ chapter, onSave, onSaveSuccess }: ChapterEditorProps) =
             className="text-xl font-bold"
             placeholder="Chapter Title"
           />
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setExportDialogOpen(true)}
+            disabled={isExporting}
           >
-            <FileText className="h-4 w-4 mr-2" />
-            Export
+            {isExporting ? "Exporting..." : "Export"}
           </Button>
         </CardTitle>
         <div className="text-xs text-muted-foreground mt-1">
@@ -124,37 +142,19 @@ const ChapterEditor = ({ chapter, onSave, onSaveSuccess }: ChapterEditorProps) =
         </div>
       </CardHeader>
       <CardContent>
-        <Textarea
-          value={content}
-          onChange={handleContentChange}
-          className="min-h-[60vh] font-serif text-base leading-relaxed"
-          placeholder="Start writing your chapter content here..."
+        <RichTextEditor
+          key={chapter.id}
+          content={content}
+          onContentChange={handleContentChange}
+          editable={true}
         />
       </CardContent>
       <CardFooter className="flex justify-between">
-        <Dialog open={draftDialogOpen} onOpenChange={setDraftDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline">
-              <Sparkles className="mr-2 h-4 w-4" />
-              Use AI Draft
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl h-[80vh]">
-            <DialogHeader>
-              <DialogTitle>Biography Draft</DialogTitle>
-              <DialogDescription>
-                Select content from the AI-generated draft to use in this chapter
-              </DialogDescription>
-            </DialogHeader>
-            <div className="overflow-y-auto flex-grow">
-              <DraftViewer 
-                biographyId={chapter.biography_id} 
-                onUpdateChapter={handleUpdateFromDraft} 
-              />
-            </div>
-          </DialogContent>
-        </Dialog>
-        
+        <Button variant="outline" onClick={onOpenDraftModal}>
+          <Sparkles className="mr-2 h-4 w-4" />
+          Use AI Draft
+        </Button>
+
         <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -163,26 +163,18 @@ const ChapterEditor = ({ chapter, onSave, onSaveSuccess }: ChapterEditorProps) =
                 Choose a format to export your chapter
               </DialogDescription>
             </DialogHeader>
-            
-            <div className="grid grid-cols-2 gap-4 py-4">
-              <Button 
-                onClick={() => handleExport('word')} 
+
+            <div className="grid grid-cols-1 gap-4 py-4">
+              <Button
+                onClick={() => handleExport('html')}
                 className="h-28 flex flex-col"
+                disabled={isExporting}
               >
-                <FileText className="h-8 w-8 mb-2" />
-                <span>Word (.docx)</span>
-                <span className="text-xs mt-1">Microsoft Word Document</span>
-              </Button>
-              <Button 
-                onClick={() => handleExport('epub')} 
-                className="h-28 flex flex-col"
-              >
-                <FileText className="h-8 w-8 mb-2" />
-                <span>EPUB (.epub)</span>
-                <span className="text-xs mt-1">E-book Format</span>
+                <span>HTML (.html)</span>
+                <span className="text-xs mt-1">Web Page Format</span>
               </Button>
             </div>
-            
+
             <DialogFooter>
               <Button variant="outline" onClick={() => setExportDialogOpen(false)}>
                 Cancel
@@ -190,7 +182,7 @@ const ChapterEditor = ({ chapter, onSave, onSaveSuccess }: ChapterEditorProps) =
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        
+
         <Button
           onClick={forceSave}
           disabled={isSaving || !hasUnsavedChanges}

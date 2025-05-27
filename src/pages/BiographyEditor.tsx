@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
@@ -11,9 +10,11 @@ import ChapterSelector from "@/components/editor/ChapterSelector";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { BiographyStatus } from "@/types/biography";
+import { BiographyStatus, Chapter } from "@/types/biography"; // Import Chapter type
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog"; // Import Dialog components
+import DraftViewer from "@/components/editor/DraftViewer"; // Import DraftViewer
 
 const BiographyEditor = () => {
   const { biographyId } = useParams<{ biographyId: string }>();
@@ -30,6 +31,7 @@ const BiographyEditor = () => {
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isDraftModalOpen, setIsDraftModalOpen] = useState(false); // New state for draft modal
 
   // Set the biography status to InProgress when editor is opened
   useEffect(() => {
@@ -71,6 +73,41 @@ const BiographyEditor = () => {
   
   const isLoading = biographyLoading || chaptersLoading;
   const error = biographyError || chaptersError;
+
+  const handlePublishBiography = async () => {
+    setIsSaving(true);
+    try {
+      if (biographyId) {
+        // Save current chapter before publishing
+        if (activeChapter) {
+          await saveChapter(activeChapter);
+        }
+
+        await supabase
+          .from("biographies")
+          .update({
+            status: BiographyStatus.Published,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", biographyId);
+        
+        toast({
+          title: "Success",
+          description: "Biography published successfully!",
+        });
+        refetchBiography(); // Refetch to update the 'Published' button state
+      }
+    } catch (error) {
+      console.error("Error publishing biography:", error);
+      toast({
+        title: "Error",
+        description: "Failed to publish biography",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleSaveAndExit = async () => {
     setIsSaving(true);
@@ -119,21 +156,58 @@ const BiographyEditor = () => {
     }
   };
 
-  const handleNavigateDraft = () => {
-    // Save current chapter before navigating
+  // Modified to open modal
+  const handleViewDraft = () => {
+    // Save current chapter before opening draft modal
     if (activeChapter) {
       saveChapter(activeChapter).then(() => {
-        navigate(`/biography/${biographyId}/draft`);
+        setIsDraftModalOpen(true);
       }).catch(error => {
-        console.error("Error saving chapter before navigation:", error);
+        console.error("Error saving chapter before opening draft modal:", error);
         toast({
           title: "Warning",
-          description: "Chapter might not be fully saved before navigating",
+          description: "Chapter might not be fully saved before viewing draft",
           variant: "destructive",
         });
+        setIsDraftModalOpen(true); // Still open modal even if save fails
       });
     } else {
-      navigate(`/biography/${biographyId}/draft`);
+      setIsDraftModalOpen(true);
+    }
+  };
+
+  const handleUpdateChapterContentFromDraft = async (chapterId: string, content: string, doRefetch: boolean = true) => {
+    if (!chapters) return;
+
+    // Find the chapter by ID
+    const chapterToUpdate = chapters.find(chapter => chapter.id === chapterId);
+
+    if (chapterToUpdate) {
+      // Create a new chapter object with updated content
+      const updatedChapter: Chapter = {
+        ...chapterToUpdate,
+        content: content,
+      };
+      
+      // Update the active chapter in the state to reflect the new content immediately
+      // This assumes activeChapterId is set correctly to the chapter being updated
+      // Since useChapters doesn't provide a setter for 'chapters', we'll rely on refetching
+      // or a more direct state management for activeChapter content in ChapterEditor.
+      // For now, we'll just save it and let the refetch handle UI update.
+      await saveChapter(updatedChapter);
+      if (doRefetch) {
+        refetchChapters(); // Refetch chapters to ensure UI is updated
+      }
+      toast({
+        title: "Success",
+        description: `Chapter "${chapterToUpdate.title}" updated with draft content.`,
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: `Could not find chapter with ID "${chapterId}" to update.`,
+        variant: "destructive",
+      });
     }
   };
 
@@ -219,11 +293,19 @@ const BiographyEditor = () => {
               
               <Button 
                 variant="outline"
-                onClick={handleNavigateDraft}
+                onClick={handleViewDraft} // Changed to open modal
               >
                 View Draft
               </Button>
               
+              <Button 
+                variant="outline"
+                onClick={handlePublishBiography}
+                disabled={isSaving || biography?.status === BiographyStatus.Published}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {biography?.status === BiographyStatus.Published ? "Published" : "Publish"}
+              </Button>
               <Button 
                 onClick={handleSaveAndExit}
                 disabled={isSaving}
@@ -253,6 +335,7 @@ const BiographyEditor = () => {
                 chapter={activeChapter} 
                 onSave={saveChapter}
                 onSaveSuccess={handleSaveSuccess}
+                onOpenDraftModal={handleViewDraft} // Pass the function to open the draft modal
               />
             ) : (
               <Card className="p-6 text-center">
@@ -264,6 +347,21 @@ const BiographyEditor = () => {
           </div>
         </div>
       </div>
+
+      {/* Draft Viewer Modal */}
+      <Dialog open={isDraftModalOpen} onOpenChange={setIsDraftModalOpen}>
+        <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+          {biographyId && (
+            <DraftViewer 
+              biographyId={biographyId} 
+              editorChapters={chapters || []} // Pass existing chapters
+              onUpdateChapter={handleUpdateChapterContentFromDraft}
+              onCloseModal={() => setIsDraftModalOpen(false)}
+              onApplyAllChaptersSuccess={refetchChapters}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
